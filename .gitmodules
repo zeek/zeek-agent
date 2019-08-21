@@ -1,0 +1,6 @@
+[submodule "libraries/sqlite/src"]
+	path = libraries/sqlite/src
+	url = https://github.com/osquery/third-party-sqlite.git
+[submodule "libraries/catch2/src"]
+	path = libraries/catch2/src
+	url = https://github.com/catchorg/Catch2.git
