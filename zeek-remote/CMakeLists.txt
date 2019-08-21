@@ -32,6 +32,7 @@ function(zeekRemoteMain)
   target_link_libraries(zeek-remote PUBLIC
     thirdparty_broker
     thirdparty_caf
+    zeek_cxx_settings
   )
 endfunction()
 

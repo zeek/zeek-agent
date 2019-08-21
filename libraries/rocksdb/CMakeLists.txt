@@ -7,22 +7,14 @@
 # You may select, at your option, one of the above-listed licenses.
 
 cmake_minimum_required(VERSION 3.10)
-project(osquery-zeek)
 
-include(cmake/utils.cmake)
-
-function(osqueryZeekMain)
-  generateZeekSettingsTarget()
-
-  set(subdirectory_list
-    libraries
-    zeek-remote
-    zeek-extension
+function(rocksdbMain)
+  # todo(alessandro): Remove this once the extension is migrated to the
+  # osquery 4.x SDK
+  add_library(thirdparty_rocksdb INTERFACE)
+  target_link_libraries(thirdparty_rocksdb INTERFACE
+    rocksdb_lite
   )
-
-  foreach(subdirectory ${subdirectory_list})
-    add_subdirectory("${subdirectory}")
-  endforeach()
 endfunction()
 
-osqueryZeekMain()
+rocksdbMain()

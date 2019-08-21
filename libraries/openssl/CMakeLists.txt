@@ -7,22 +7,18 @@
 # You may select, at your option, one of the above-listed licenses.
 
 cmake_minimum_required(VERSION 3.10)
-project(osquery-zeek)
 
-include(cmake/utils.cmake)
-
-function(osqueryZeekMain)
-  generateZeekSettingsTarget()
-
-  set(subdirectory_list
-    libraries
-    zeek-remote
-    zeek-extension
+function(opensslMain)
+  # todo(alessandro): Remove this once the extension is migrated to the
+  # osquery 4.x SDK
+  add_library(thirdparty_openssl STATIC IMPORTED GLOBAL)
+  set_target_properties(thirdparty_openssl PROPERTIES IMPORTED_LOCATION
+    /usr/local/osquery/lib/libssl.a
   )
 
-  foreach(subdirectory ${subdirectory_list})
-    add_subdirectory("${subdirectory}")
-  endforeach()
+  target_include_directories(thirdparty_openssl SYSTEM INTERFACE
+    /usr/local/osquery/include
+  )
 endfunction()
 
-osqueryZeekMain()
+opensslMain()
