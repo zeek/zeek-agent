@@ -6,8 +6,8 @@
 3. Install the required system dependencies and third party libraries: `( cd osquery-extension-sdk-env && make sysprep )`
 
 ## Build the extension
-1. Clone the osquery-zeek repository: `git clone https://github.com/<organization_name>/osquery-zeek --recursive`
-2. Link the extension source code inside the osquery repository: `ln -s "$(realpath osquery-zeek)" osquery-extension-sdk-env/external/extension_osquery-zeek`
+1. Clone the osquery-extension repository: `git clone https://github.com/zeek/osquery-extension.git --recursive`
+2. Link the extension source code inside the osquery repository: `ln -s "$(realpath osquery-extension)" osquery-extension-sdk-env/external/extension_osquery-zeek`
 3. **Optional**: Disable the osquery tests and benchmarks: `export SKIP_TESTS=1 ; export SKIP_BENCHMARKS=1`
 4. Build the extension: `( cd osquery-extension-sdk-env && make -j $(nproc) )`
 
