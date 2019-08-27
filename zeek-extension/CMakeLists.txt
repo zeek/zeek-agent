@@ -25,7 +25,10 @@ function(zeekExtensionMain)
     src/main.cpp
   )
 
-  target_link_libraries("${PROJECT_NAME}" zeek-remote)
+  target_link_libraries("${PROJECT_NAME}"
+    zeek-remote
+    thirdparty_rapidjson
+  )
 endfunction()
 
 zeekExtensionMain()

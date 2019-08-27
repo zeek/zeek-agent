@@ -34,9 +34,11 @@
 
 namespace zeek {
 struct BrokerManager::PrivateData final {
+  // Server address and port, taken from the Zeek configuration file
   std::string server_address;
   std::uint16_t server_port{9999U};
-  std::string server_group_list;
+
+  // A pointer to a shared query manager instance
   IQueryManager::Ref query_manager;
 
   // Mutex to synchronize threats that check connection state
@@ -63,17 +65,18 @@ struct BrokerManager::PrivateData final {
   //  Key: topic_Name, Value: subscriber
   std::map<std::string, std::shared_ptr<broker::subscriber>> subscribers;
 
+  // Initialized from the configuration file
   std::vector<std::string> startup_groups;
 };
 
 BrokerManager::BrokerManager(const std::string& server_address,
                              std::uint16_t server_port,
-                             const std::string& server_group_list,
+                             const std::vector<std::string>& server_group_list,
                              IQueryManager::Ref query_manager)
     : d(new PrivateData) {
   d->server_address = server_address;
   d->server_port = server_port;
-  d->server_group_list = server_group_list;
+  d->startup_groups = server_group_list;
   d->query_manager = query_manager;
 
   // Set Broker UID
@@ -82,18 +85,12 @@ BrokerManager::BrokerManager(const std::string& server_address,
 
   const auto& uid = getNodeID();
 
-  // Read groups from config
-  auto s = parseBrokerGroups(d->server_group_list, d->startup_groups);
-  if (!s.ok()) {
-    LOG(WARNING) << s.getMessage();
-  }
-
   // Read remote endpoint from config
   d->remote_endpoint =
       std::pair<std::string, int>(d->server_address, d->server_port);
 
   // Create Broker endpoint
-  s = createEndpoint(uid);
+  auto s = createEndpoint(uid);
   if (!s.ok()) {
     LOG(ERROR) << "Failed to create broker endpoint";
     throw std::runtime_error{"Broker endpoint cannot be created"};
@@ -580,11 +577,12 @@ osquery::Status BrokerManager::sendEvent(const std::string& topic,
   return osquery::Status::success();
 }
 
-osquery::Status IBrokerManager::create(Ref& ref,
-                                       const std::string& server_address,
-                                       std::uint16_t server_port,
-                                       const std::string& server_group_list,
-                                       IQueryManager::Ref query_manager) {
+osquery::Status IBrokerManager::create(
+    Ref& ref,
+    const std::string& server_address,
+    std::uint16_t server_port,
+    const std::vector<std::string>& server_group_list,
+    IQueryManager::Ref query_manager) {
   try {
     ref.reset();
 

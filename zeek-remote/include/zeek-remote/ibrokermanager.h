@@ -40,11 +40,12 @@ namespace zeek {
 class IBrokerManager {
  public:
   using Ref = std::unique_ptr<IBrokerManager>;
-  static osquery::Status create(Ref& ref,
-                                const std::string& server_address,
-                                std::uint16_t server_port,
-                                const std::string& server_group_list,
-                                IQueryManager::Ref query_manager);
+  static osquery::Status create(
+      Ref& ref,
+      const std::string& server_address,
+      std::uint16_t server_port,
+      const std::vector<std::string>& server_group_list,
+      IQueryManager::Ref query_manager);
 
   virtual ~IBrokerManager() = default;
 

@@ -150,41 +150,6 @@ osquery::Status createSubscriptionRequest(const BrokerRequestType& rType,
   return osquery::Status::success();
 }
 
-osquery::Status parseBrokerGroups(const std::string& json_groups,
-                                  std::vector<std::string>& groups) {
-  auto doc = osquery::JSON::newObject();
-  auto s = doc.fromString(json_groups);
-  if (!s.ok()) {
-    return s;
-  }
-
-  for (const auto& group_entry : doc.doc().GetObject()) {
-    // Get Group ID
-    if (!group_entry.name.IsString()) {
-      return osquery::Status::failure("Group Identifier is not a string");
-    }
-
-    auto name = std::string(group_entry.name.GetString());
-    // if (name.empty()) {
-    //  return osquery::Status(1, "Group Identifier is empty");
-    //}
-
-    // Get Group Name
-    if (!group_entry.value.IsString()) {
-      return osquery::Status::failure("Group name is not a string");
-    }
-
-    auto value = std::string(group_entry.value.GetString());
-    if (value.empty()) {
-      return osquery::Status::failure("Group name is empty");
-    }
-
-    groups.push_back(value);
-  }
-
-  return osquery::Status::success();
-}
-
 osquery::Status serializeDistributedQueryRequestsJSON(
     const std::vector<osquery::DistributedQueryRequest>& rs,
     std::string& json) {

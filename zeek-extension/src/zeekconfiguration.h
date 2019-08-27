@@ -12,7 +12,7 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
+#include <unordered_map>
 
 #include <osquery/status.h>
 
@@ -26,7 +26,16 @@ class ZeekConfiguration final {
 
   const std::string& serverAddress() const;
   std::uint16_t serverPort() const;
-  const std::string& groupList() const;
+  const std::vector<std::string>& groupList() const;
+
+  struct ConfigurationData final {
+    std::string server_address;
+    std::uint16_t server_port;
+    std::vector<std::string> group_list;
+  };
+
+  static osquery::Status parseConfigurationData(ConfigurationData& config,
+                                                const std::string& json);
 
  private:
   struct PrivateData;

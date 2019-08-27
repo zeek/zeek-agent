@@ -47,19 +47,6 @@ osquery::Status createSubscriptionRequest(const BrokerRequestType& rType,
                                           SubscriptionRequest& sr);
 
 /**
- * @brief Parse the broker groups from the json configuration
- *
- * Initial groups can be written to the configuration to indicate which groups
- * (i.e. broker topics) the osquery host should join
- *
- * @param json_groups the part of the json configuration that holds the groups
- * @param groups the parsed groups
- * @return
- */
-osquery::Status parseBrokerGroups(const std::string& json_groups,
-                                  std::vector<std::string>& groups);
-
-/**
  * @brief Serialize a vector of DistributedQueryRequest objects into a JSON
  * string
  *
