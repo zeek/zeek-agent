@@ -25,6 +25,7 @@ function(zeekLibrariesMain)
 
     actor-framework
     broker
+    rapidjson
   )
 
   foreach(library ${library_list})
