@@ -11,6 +11,8 @@
 #include <zeek-remote/types.h>
 
 namespace zeek {
+// This should be renamed to "/zeek/osquery/", but the osquery framework
+// has to be updated first
 #define ZEEK_TOPIC_PREFIX "/bro/osquery/"
 
 const std::string BrokerTopics::ALL{ZEEK_TOPIC_PREFIX "hosts"};

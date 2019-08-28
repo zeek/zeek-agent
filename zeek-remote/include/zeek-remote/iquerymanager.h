@@ -92,7 +92,7 @@ class IQueryManager : private boost::noncopyable {
   virtual std::string getQueryConfigString() = 0;
 
   /// Update the core schedule with the queries that are currently subscribed
-  /// to from Bro
+  /// to from Zeek
   virtual osquery::Status updateSchedule() = 0;
 
   /// Get the cookie the was given in the subscription request of a query given

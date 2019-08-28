@@ -71,7 +71,7 @@ osquery::Status QueryManager::reset() {
 }
 
 std::string QueryManager::addOneTimeQueryEntry(const SubscriptionRequest& qr) {
-  const auto queryID = "bro_" + std::to_string(d->nextUID++);
+  const auto queryID = "zeek_" + std::to_string(d->nextUID++);
   auto status = addQueryEntry(queryID, qr, "ONETIME");
   if (!status.ok()) {
     LOG(WARNING) << status.getMessage();
@@ -82,7 +82,7 @@ std::string QueryManager::addOneTimeQueryEntry(const SubscriptionRequest& qr) {
 
 osquery::Status QueryManager::addScheduleQueryEntry(
     const SubscriptionRequest& qr) {
-  const auto queryID = "bro_" + std::to_string(d->nextUID++);
+  const auto queryID = "zeek_" + std::to_string(d->nextUID++);
   return addQueryEntry(queryID, qr, "SCHEDULE");
 }
 
@@ -233,7 +233,7 @@ std::string QueryManager::getQueryConfigString() {
 osquery::Status QueryManager::updateSchedule() {
   std::map<std::string, std::string> new_config_schedule;
 
-  VLOG(1) << "Applying new schedule based on bro queries";
+  VLOG(1) << "Applying new schedule based on Zeek queries";
 
   ConfigurationFileMap osquery_configuration;
   auto status = getOsqueryConfiguration(osquery_configuration);
