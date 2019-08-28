@@ -287,7 +287,7 @@ osquery::Status ZeekDistributedPlugin::writeResults(const std::string& json) {
 
     // Send snapshot to the logger
     std::string registry_name = "logger";
-    std::string item_name = "bro";
+    std::string item_name = "zeek_logger";
     std::string json_str;
     serializeQueryLogItemJSON(item, json_str);
 
