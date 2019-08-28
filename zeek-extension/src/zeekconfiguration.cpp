@@ -8,24 +8,18 @@
  *  You may select, at your option, one of the above-listed licenses.
  */
 
+#include <osquery/logger.h>
+#include <osquery/status.h>
+
+#include "configurationchecker.h"
 #include "zeekconfiguration.h"
 
+#include <fstream>
 #include <unordered_map>
-
-#include <osquery/sdk.h>
-
-// todo(alessandro): this is defined project-wide by the osquery sdk; we
-// can remove this when switching to version 4.x
-#ifdef RAPIDJSON_NO_SIZETYPEDEFINE
-#undef RAPIDJSON_NO_SIZETYPEDEFINE
-#endif
-
-#include <rapidjson/document.h>
 
 namespace zeek {
 namespace {
 const std::string kConfigurationPath{"/etc/osquery/zeek.conf"};
-
 const std::string kDefaultServerAddress{"127.0.0.1"};
 const std::uint16_t kDefaultServerPort{9999U};
 
@@ -36,13 +30,40 @@ const std::vector<std::string> kDefaultGroupList = {
 };
 // clang-format on
 
-enum class MemberType { String, UInt16, StringArray };
-
 // clang-format off
-const std::unordered_map<std::string, MemberType> kRequiredMemberList = {
-  { "server_address", MemberType::String },
-  { "server_port", MemberType::UInt16 },
-  { "group_list", MemberType::StringArray }
+const ConfigurationChecker::Constraints kConfigurationConstraints = {
+  {
+    "server_address",
+
+    {
+      ConfigurationChecker::MemberConstraint::Type::String,
+      false,
+      "",
+      true
+    }
+  },
+
+  {
+    "server_port",
+
+    {
+      ConfigurationChecker::MemberConstraint::Type::UInt16,
+      false,
+      "",
+      true
+    }
+  },
+
+  {
+    "group_list",
+
+    {
+      ConfigurationChecker::MemberConstraint::Type::String,
+      true,
+      "",
+      true
+    }
+  }
 };
 // clang-format on
 } // namespace
@@ -87,91 +108,28 @@ osquery::Status ZeekConfiguration::parseConfigurationData(
     ConfigurationData& config, const std::string& json) {
   config = {};
 
-  rapidjson::Document document;
-  document.Parse(json);
-  if (!document.IsObject()) {
-    return osquery::Status::failure(
-        "The configuration file does not contain a valid JSON object");
+  ConfigurationChecker::Ref config_checker;
+  auto status =
+      ConfigurationChecker::create(config_checker, kConfigurationConstraints);
+  if (!status.ok()) {
+    return status;
   }
 
-  for (const auto& p : kRequiredMemberList) {
-    const auto& member_name = p.first;
-    const auto& member_type = p.second;
+  rapidjson::Document document;
+  document.Parse(json);
 
-    if (!document.HasMember(member_name)) {
-      return osquery::Status::failure("The " + member_name +
-                                      " member is required");
-    }
-
-    bool valid_type = false;
-    const auto& member = document[member_name];
-
-    switch (member_type) {
-    case MemberType::String: {
-      valid_type = member.IsString();
-      break;
-    }
-
-    case MemberType::UInt16: {
-      if (!member.IsNumber()) {
-        break;
-      }
-
-      auto value = member.GetInt();
-      if (value < 0 || value > std::numeric_limits<std::uint16_t>::max()) {
-        break;
-      }
-
-      valid_type = true;
-      break;
-    }
-
-    case MemberType::StringArray: {
-      if (!member.IsArray()) {
-        break;
-      }
-
-      for (auto i = 0; i < member.Size(); ++i) {
-        if (!member[i].IsString()) {
-          break;
-        }
-      }
-
-      valid_type = true;
-      break;
-    }
-    }
-
-    if (!valid_type) {
-      std::stringstream error_message;
-      error_message << "The type of the " << member_name
-                    << " setting should be: ";
-      switch (member_type) {
-      case MemberType::String: {
-        error_message << "string";
-        break;
-      }
-
-      case MemberType::UInt16: {
-        error_message << "uint16";
-        break;
-      }
-
-      case MemberType::StringArray: {
-        error_message << "string array";
-        break;
-      }
-      }
-
-      return osquery::Status::failure(error_message.str());
-    }
+  status = config_checker->validate(document);
+  if (!status.ok()) {
+    return status;
   }
 
   config.server_address = document["server_address"].GetString();
+
   config.server_port =
       static_cast<std::uint16_t>(document["server_port"].GetInt());
 
   const auto& group_list = document["group_list"];
+
   for (auto i = 0; i < group_list.Size(); ++i) {
     const auto& group = group_list[i].GetString();
     config.group_list.push_back(group);

@@ -23,9 +23,11 @@ function(zeekLibrariesMain)
     sqlite
     rocksdb
 
+    # todo(alessandro): Uncomment this when we move to osquery 4.x
+    # rapidjson
+
     actor-framework
     broker
-    rapidjson
   )
 
   foreach(library ${library_list})

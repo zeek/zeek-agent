@@ -37,6 +37,9 @@ class ZeekConfiguration final {
   static osquery::Status parseConfigurationData(ConfigurationData& config,
                                                 const std::string& json);
 
+  ZeekConfiguration(const ZeekConfiguration&) = delete;
+  ZeekConfiguration& operator=(const ZeekConfiguration&) = delete;
+
  private:
   struct PrivateData;
   std::unique_ptr<PrivateData> d;

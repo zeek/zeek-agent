@@ -9,27 +9,14 @@
  */
 
 #include "zeekloggerplugin.h"
+#include "configurationchecker.h"
 #include "globals.h"
 
+// todo: replace this with <rapidjson/document.h> when moving to osquery 4.x
+#include <osquery/core/json.h>
+
 namespace zeek {
-bool _logger_event_type = false;
-bool _disable_distributed = false;
-std::string _distributed_plugin{"zeek_distributed"};
-
 osquery::Status ZeekLoggerPlugin::setUp() {
-  if (_disable_distributed) {
-    return osquery::Status::failure("The distributed service is disabled");
-  }
-
-  if (_distributed_plugin != "zeek_distributed") {
-    return osquery::Status::failure("The Zeek distributed service is disabled");
-  }
-
-  if (_logger_event_type) {
-    return osquery::Status::failure(
-        "The Zeek logger cannot use event type logging");
-  }
-
   auto status = initializeGlobals();
   if (!status.ok()) {
     return status;

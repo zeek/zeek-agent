@@ -10,6 +10,8 @@
 
 #include <osquery/sdk.h>
 
+#include <zeek-remote/utils.h>
+
 namespace zeek {
 class ZeekLoggerPlugin : public osquery::LoggerPlugin {
  public:

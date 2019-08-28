@@ -9,6 +9,9 @@
  */
 
 #include "globals.h"
+#include "configurationchecker.h"
+
+#include <zeek-remote/utils.h>
 
 namespace zeek {
 namespace {

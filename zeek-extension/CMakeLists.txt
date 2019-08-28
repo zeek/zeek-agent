@@ -19,6 +19,9 @@ function(zeekExtensionMain)
     src/zeekconfiguration.h
     src/zeekconfiguration.cpp
 
+    src/configurationchecker.h
+    src/configurationchecker.cpp
+
     src/globals.h
     src/globals.cpp
 
@@ -27,7 +30,9 @@ function(zeekExtensionMain)
 
   target_link_libraries("${PROJECT_NAME}"
     zeek-remote
-    thirdparty_rapidjson
+
+    # Uncomment this when moving to osquery 4.x
+    # thirdparty_rapidjson
   )
 endfunction()
 

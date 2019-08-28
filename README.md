@@ -33,37 +33,23 @@ The latest version is required in order to run the extension correctly. Releases
 ## /etc/osquery/extensions.load
 This file should contain the full path to the `osquery-zeek.ext` binary.
 
-## /etc/osquery/osquery.conf
+## /etc/osquery.flags.default
 ```
-{
-  "options": {
-    # Enable extensions; make sure the Zeek components we need are marked as required
-    "disable_extensions": 0,
-    "extensions_timeout": 10,
-    "extensions_require": "zeek_logger,zeek_distributed",
-
-    # Enable the Zeek distributed plugin
-    "disable_distributed": 0,
-    "distributed_plugin": "zeek_distributed",
-
-    # Enable the Zeek logger plugin
-    "logger_path": "/var/log/osquery",
-    "logger_plugin": "filesystem,zeek_logger",
-    "logger_event_type": 0,
-
-    # Enable events
-    "disable_events": 0,
-
-    # Audit settings
-    "disable_audit": 0,
-    "audit_allow_config": 1,
-    "audit_allow_sockets": 1,
-    "audit_force_reconfigure": 1,
-    "audit_persist": 1,
-    "audit_allow_sockets": 1,
-    "audit_allow_fork_process_events": 1
-  }
-}
+--logger_path=/var/log/osquery
+--disable_audit=false
+--audit_allow_config=true
+--audit_allow_sockets=true
+--audit_force_reconfigure=true
+--audit_persist=true
+--audit_allow_fork_process_events=true
+--disable_extensions=false
+--extensions_timeout=10
+--extensions_required=zeek_logger,zeek_distributed
+--disable_distributed=false
+--distributed_plugin=zeek_distributed
+--logger_plugin=zeek_logger
+--logger_event_type=false
+--disable_events=false
 ```
 
 ## /etc/osquery/zeek.conf
