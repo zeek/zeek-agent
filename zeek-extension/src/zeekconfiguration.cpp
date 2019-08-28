@@ -219,6 +219,6 @@ ZeekConfiguration::ZeekConfiguration(const std::string& path)
     group_list << group;
   }
 
-  VLOG(1) << "Zeel group list: " << group_list.str();
+  VLOG(1) << "Zeek group list: " << group_list.str();
 }
 } // namespace zeek
