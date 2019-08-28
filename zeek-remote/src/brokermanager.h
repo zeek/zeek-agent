@@ -92,7 +92,7 @@ class BrokerManager final : public IBrokerManager {
   virtual osquery::Status announce() override;
   virtual int getOutgoingConnectionFD() override;
 
-  virtual osquery::Status logQueryLogItemToBro(
+  virtual osquery::Status logQueryLogItemToZeek(
       const osquery::QueryLogItem& qli) override;
 
   virtual osquery::Status sendEvent(const std::string& topic,

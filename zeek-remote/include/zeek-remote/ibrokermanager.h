@@ -129,7 +129,7 @@ class IBrokerManager {
   virtual int getOutgoingConnectionFD() = 0;
 
   /// Send each entry in the QueryLogItem as broker event
-  virtual osquery::Status logQueryLogItemToBro(
+  virtual osquery::Status logQueryLogItemToZeek(
       const osquery::QueryLogItem& qli) = 0;
 
   /// Send the broker message to a specific topic

@@ -406,7 +406,7 @@ int BrokerManager::getOutgoingConnectionFD() {
   return d->ss->fd();
 }
 
-osquery::Status BrokerManager::logQueryLogItemToBro(
+osquery::Status BrokerManager::logQueryLogItemToZeek(
     const osquery::QueryLogItem& qli) {
   const auto& queryID = qli.name;
 

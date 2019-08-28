@@ -12,10 +12,10 @@
 
 namespace zeek {
 /**
- * @brief Distributed Plugin for the communication with Bro via broker
+ * @brief Distributed Plugin for the communication with Zeek via broker
  *
  * This DistributedPlugin is the main entry point for the communication with
- * Bro. It implements a server-"loop" to wait for any incoming messages via
+ * Zeek. It implements a server-"loop" to wait for any incoming messages via
  * broker. It utilizes the BrokerManager and QueryManager to keep state about
  * broker connections and query requests, respectively.
  *
@@ -38,7 +38,7 @@ class ZeekDistributedPlugin final : public osquery::DistributedPlugin {
    * messages
    *
    * This base method was originally designed to retrieve the latest remote
-   * configuration from server. However, the communication pattern with Bro is
+   * configuration from server. However, the communication pattern with Zeek is
    * not request-response-based but event-based. Thus, this method
    * implementation blocks until the next broker message is available to be
    * read. After return, this method is meant to be immediately be called again
@@ -59,7 +59,7 @@ class ZeekDistributedPlugin final : public osquery::DistributedPlugin {
   virtual osquery::Status getQueries(std::string& json) override;
 
   /**
-   * @brief Write the results of the one-time queries via the bro logger plugin
+   * @brief Write the results of the one-time queries via the Zeek logger plugin
    *
    * @param json the results of the one-time queries
    * @return

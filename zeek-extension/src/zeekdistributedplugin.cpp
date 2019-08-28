@@ -152,7 +152,7 @@ osquery::Status processMessage(
 } // namespace
 
 osquery::Status ZeekDistributedPlugin::setUp() {
-  LOG(INFO) << "Starting the Bro Distributed Plugin";
+  LOG(INFO) << "Starting the Zeek Distributed Plugin";
 
   auto status = initializeGlobals();
   if (!status.ok()) {
