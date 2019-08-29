@@ -183,7 +183,6 @@ osquery::Status BrokerManager::createEndpoint(const std::string& ep_name) {
     return osquery::Status::failure("Broker Endpoint already exists");
   }
 
-  VLOG(1) << "Creating broker endpoint for name: " << ep_name;
   d->ep = std::make_unique<broker::endpoint>();
   return osquery::Status::success();
 }

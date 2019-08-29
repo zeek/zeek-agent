@@ -9,6 +9,11 @@
 cmake_minimum_required(VERSION 3.10)
 
 function(zeekRemoteMain)
+  add_subdirectory(tests)
+  generateZeekRemote()
+endfunction()
+
+function(generateZeekRemote)
   add_library(zeek-remote
     include/zeek-remote/ibrokermanager.h
     include/zeek-remote/iquerymanager.h
@@ -26,7 +31,7 @@ function(zeekRemoteMain)
   )
 
   target_include_directories(zeek-remote PUBLIC
-    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+     "${CMAKE_CURRENT_SOURCE_DIR}/include"
   )
 
   target_link_libraries(zeek-remote PUBLIC

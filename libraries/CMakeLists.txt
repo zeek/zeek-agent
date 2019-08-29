@@ -22,10 +22,11 @@ function(zeekLibrariesMain)
     openssl
     sqlite
     rocksdb
+    googletest
 
-    # todo(alessandro): Uncomment this when we move to osquery 4.x
+    # todo(alessandro): Uncomment these once the extension is migrated to the
+    # osquery 4.x SDK
     # rapidjson
-
     actor-framework
     broker
   )
