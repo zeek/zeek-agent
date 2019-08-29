@@ -1,3 +1,9 @@
+# About
+
+This extension allows Zeek to perform live queries against osquery tables.
+
+The original code has been implemented by [iBigQ](https://github.com/iBigQ) and can be found in [his osquery fork](https://github.com/iBigQ/osquery).
+
 # Build instructions
 
 ## Initialize the osquery build environment
