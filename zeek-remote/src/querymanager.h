@@ -73,7 +73,6 @@ class QueryManager final : public IQueryManager {
   virtual std::string getEventCookie(const std::string& queryID) override;
   virtual std::string getEventName(const std::string& queryID) override;
   virtual std::string getEventTopic(const std::string& queryID) override;
-  virtual std::vector<std::string> getQueryIDs() override;
 
  protected:
   QueryManager(DatabaseInterfaceRef database_interface);
@@ -107,6 +106,9 @@ class QueryManager final : public IQueryManager {
   /// Generate configuration data for the query schedule (osqueryd) from the
   /// broker query tracking
   static std::string getQueryConfigString(const Context& context);
+
+  /// Get a vector of all currently tracked queryIDs
+  static std::vector<std::string> getQueryIDs(const Context& context);
 
   friend class IQueryManager;
 };

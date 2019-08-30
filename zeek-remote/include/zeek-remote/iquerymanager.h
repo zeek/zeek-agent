@@ -87,8 +87,5 @@ class IQueryManager : private boost::noncopyable {
   /// Get the response event topic the was given in the subscription request of
   /// a query given by the queryID
   virtual std::string getEventTopic(const std::string& queryID) = 0;
-
-  /// Get a vector of all currently tracked queryIDs
-  virtual std::vector<std::string> getQueryIDs() = 0;
 };
 } // namespace zeek

@@ -41,7 +41,7 @@ QueryManager::QueryManager(DatabaseInterfaceRef database_interface)
 QueryManager::~QueryManager() {}
 
 osquery::Status QueryManager::reset() {
-  std::vector<std::string> queryIDs = getQueryIDs();
+  auto queryIDs = getQueryIDs(d->context);
 
   // Collect query strings
   std::vector<std::string> queries;
@@ -185,19 +185,6 @@ std::string QueryManager::getEventTopic(const std::string& queryID) {
   return d->context.event_topics.at(queryID);
 }
 
-std::vector<std::string> QueryManager::getQueryIDs() {
-  // Collect queryIDs
-  std::vector<std::string> queryIDs;
-  for (const auto& id : d->context.schedule_queries) {
-    queryIDs.push_back(id.first);
-  }
-  for (const auto& id : d->context.one_time_queries) {
-    queryIDs.push_back(id.first);
-  }
-
-  return queryIDs;
-}
-
 std::string QueryManager::generateQueryId() {
   return "zeek_" + std::to_string(d->nextUID++);
 }
@@ -295,6 +282,19 @@ std::string QueryManager::getQueryConfigString(const Context& context) {
       std::string("{\"schedule\": {") + queries + std::string("} }");
 
   return config;
+}
+
+std::vector<std::string> QueryManager::getQueryIDs(const Context& context) {
+  std::vector<std::string> query_id_list;
+  for (const auto& id : context.schedule_queries) {
+    query_id_list.push_back(id.first);
+  }
+
+  for (const auto& id : context.one_time_queries) {
+    query_id_list.push_back(id.first);
+  }
+
+  return query_id_list;
 }
 
 osquery::Status IQueryManager::create(Ref& ref) {

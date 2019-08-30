@@ -244,4 +244,29 @@ TEST(QueryManager, getQueryConfigString) {
   ASSERT_TRUE(snapshot.IsNumber());
   ASSERT_EQ(snapshot.GetInt(), kSnapshot ? 1 : 0);
 }
+
+TEST(QueryManager, getQueryIDs) {
+  QueryManager::Context context;
+  std::vector<std::string> expected_query_id_list;
+
+  for (auto i = 0U; i < 10U; ++i) {
+    auto query_id = "schedule_queries_" + std::to_string(i);
+    context.schedule_queries.insert({query_id, {}});
+    expected_query_id_list.push_back(query_id);
+
+    query_id = "one_time_queries_" + std::to_string(i);
+    context.one_time_queries.insert({query_id, {}});
+    expected_query_id_list.push_back(query_id);
+  }
+
+  auto query_id_list = QueryManager::getQueryIDs(context);
+  ASSERT_EQ(query_id_list.size(), expected_query_id_list.size());
+
+  for (const auto& expected_query_id : expected_query_id_list) {
+    auto it = std::find(
+        query_id_list.begin(), query_id_list.end(), expected_query_id);
+
+    ASSERT_TRUE(it != query_id_list.end());
+  }
+}
 } // namespace zeek
