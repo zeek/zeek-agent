@@ -152,35 +152,6 @@ osquery::Status QueryManager::removeQueryEntry(const std::string& query) {
   return osquery::Status::success();
 }
 
-std::string QueryManager::getQueryConfigString() {
-  // Format each query
-  std::vector<std::string> scheduleQ;
-  for (const auto& bq : d->context.schedule_queries) {
-    auto i = bq.second;
-    std::stringstream ss;
-    ss << "\"" << std::get<0>(i) << "\": {\"query\": \"" << std::get<1>(i)
-       << ";\", \"interval\": " << std::get<2>(i)
-       << ", \"added\": " << std::get<3>(i)
-       << ", \"removed\": " << std::get<4>(i)
-       << ", \"snapshot\": " << std::get<5>(i) << "}";
-    std::string q = ss.str();
-    scheduleQ.push_back(q);
-  }
-
-  // Assemble queries
-  std::stringstream ss;
-  for (size_t i = 0; i < scheduleQ.size(); ++i) {
-    if (i != 0)
-      ss << ",";
-    ss << scheduleQ[i];
-  }
-  const auto& queries = ss.str();
-  std::string config =
-      std::string("{\"schedule\": {") + queries + std::string("} }");
-
-  return config;
-}
-
 osquery::Status QueryManager::updateSchedule() {
   std::map<std::string, std::string> new_config_schedule;
 
@@ -194,7 +165,7 @@ osquery::Status QueryManager::updateSchedule() {
   }
 
   osquery_configuration["/memory/zeek_distributed.conf"] =
-      getQueryConfigString();
+      getQueryConfigString(d->context);
 
   osquery::Config::get().update(osquery_configuration);
 
@@ -287,6 +258,42 @@ void QueryManager::purgeScheduledQueryFromDatabase(
               << " (" << status.getMessage() << ")";
     }
   }
+}
+
+std::string QueryManager::getQueryConfigString(const Context& context) {
+  // Format each query
+  std::vector<std::string> schedule_queue;
+
+  for (const auto& bq : context.schedule_queries) {
+    auto i = bq.second;
+
+    std::stringstream ss;
+    ss << "\"" << std::get<0>(i) << "\": {\"query\": \"" << std::get<1>(i)
+       << ";\", \"interval\": " << std::get<2>(i)
+       << ", \"added\": " << std::get<3>(i)
+       << ", \"removed\": " << std::get<4>(i)
+       << ", \"snapshot\": " << std::get<5>(i) << "}";
+
+    std::string query = ss.str();
+    schedule_queue.push_back(query);
+  }
+
+  // Assemble queries
+  std::stringstream ss;
+  for (auto i = 0U; i < schedule_queue.size(); ++i) {
+    if (i != 0) {
+      ss << ",";
+    }
+
+    ss << schedule_queue.at(i);
+  }
+
+  const auto& queries = ss.str();
+
+  std::string config =
+      std::string("{\"schedule\": {") + queries + std::string("} }");
+
+  return config;
 }
 
 osquery::Status IQueryManager::create(Ref& ref) {

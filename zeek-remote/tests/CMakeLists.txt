@@ -35,6 +35,9 @@ function(zeekRemoteTests)
       LINK_LIBRARIES
         ${library_list}
 
+        # todo: Uncomment this when moving to osquery 4.x
+        # thirdparty_rapidjson
+
       INCLUDE_DIRECTORIES
         "${CMAKE_CURRENT_SOURCE_DIR}/../include"
         "${CMAKE_CURRENT_SOURCE_DIR}/../src"

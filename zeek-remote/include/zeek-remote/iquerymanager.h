@@ -72,10 +72,6 @@ class IQueryManager : private boost::noncopyable {
   /// Remove a query from tracking given by the query string
   virtual osquery::Status removeQueryEntry(const std::string& query) = 0;
 
-  /// Generate configuration data for the query schedule (osqueryd) from the
-  /// broker query tracking
-  virtual std::string getQueryConfigString() = 0;
-
   /// Update the core schedule with the queries that are currently subscribed
   /// to from Zeek
   virtual osquery::Status updateSchedule() = 0;

@@ -69,7 +69,6 @@ class QueryManager final : public IQueryManager {
                                            std::string& query) override;
 
   virtual osquery::Status removeQueryEntry(const std::string& query) override;
-  virtual std::string getQueryConfigString() override;
   virtual osquery::Status updateSchedule() override;
   virtual std::string getEventCookie(const std::string& queryID) override;
   virtual std::string getEventName(const std::string& queryID) override;
@@ -104,6 +103,10 @@ class QueryManager final : public IQueryManager {
   /// Remove all references to the query from the database
   static void purgeScheduledQueryFromDatabase(
       DatabaseInterfaceRef database_interface, const std::string& query_id);
+
+  /// Generate configuration data for the query schedule (osqueryd) from the
+  /// broker query tracking
+  static std::string getQueryConfigString(const Context& context);
 
   friend class IQueryManager;
 };
