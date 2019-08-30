@@ -60,18 +60,6 @@ class IQueryManager : private boost::noncopyable {
   virtual osquery::Status addScheduleQueryEntry(
       const SubscriptionRequest& qr) = 0;
 
-  /**
-   * @brief Add a query to tracking with fixed properties
-   *
-   * @param queryID the queryID to use for this query
-   * @param qr the subscription request for this query
-   * @param qtype the type of the query ("SCHEDULE" or "ONETIME")
-   * @return
-   */
-  virtual osquery::Status addQueryEntry(const std::string& queryID,
-                                        const SubscriptionRequest& qr,
-                                        const std::string& qtype) = 0;
-
   /// Find the queryID for a query that is tracked given by the query string
   virtual std::string findIDForQuery(const std::string& query) = 0;
 
@@ -83,9 +71,6 @@ class IQueryManager : private boost::noncopyable {
 
   /// Remove a query from tracking given by the query string
   virtual osquery::Status removeQueryEntry(const std::string& query) = 0;
-
-  /// Remove all references to the query from the database
-  virtual osquery::Status purgeQuery(const std::string& query) = 0;
 
   /// Generate configuration data for the query schedule (osqueryd) from the
   /// broker query tracking

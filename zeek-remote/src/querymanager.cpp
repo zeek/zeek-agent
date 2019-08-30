@@ -23,27 +23,20 @@
 
 namespace zeek {
 struct QueryManager::PrivateData final {
+  Context context;
+
+  // Interface used to read, delete and write keys into the
+  // database
+  DatabaseInterfaceRef database_interface;
+
   // Next unique QueryID
   int nextUID{1};
-
-  // Collection of SQL Schedule Subscription queries, Key: QueryID
-  std::map<std::string, ScheduleQueryEntry> schedule_queries;
-
-  // Collection of SQL One-Time Subscription queries, Key: QueryID
-  std::map<std::string, OneTimeQueryEntry> one_time_queries;
-
-  // Some mapping to maintain the SQL subscriptions
-  //  Key: QueryID, Value: Event Cookie to use for the response
-  std::map<std::string, std::string> event_cookies;
-
-  //  Key: QueryID, Value: Event Name to use for the response
-  std::map<std::string, std::string> event_names;
-
-  //  Key: QueryID, Value: Topic to use for the response
-  std::map<std::string, std::string> event_topics;
 };
 
-QueryManager::QueryManager() : d(new PrivateData) {}
+QueryManager::QueryManager(DatabaseInterfaceRef database_interface)
+    : d(new PrivateData) {
+  d->database_interface = database_interface;
+}
 
 QueryManager::~QueryManager() {}
 
@@ -52,11 +45,11 @@ osquery::Status QueryManager::reset() {
 
   // Collect query strings
   std::vector<std::string> queries;
-  for (const auto& id : d->schedule_queries) {
+  for (const auto& id : d->context.schedule_queries) {
     queries.push_back(std::get<1>(id.second));
   }
 
-  for (const auto& id : d->one_time_queries) {
+  for (const auto& id : d->context.one_time_queries) {
     queries.push_back(std::get<1>(id.second));
   }
 
@@ -71,57 +64,29 @@ osquery::Status QueryManager::reset() {
 }
 
 std::string QueryManager::addOneTimeQueryEntry(const SubscriptionRequest& qr) {
-  const auto queryID = "zeek_" + std::to_string(d->nextUID++);
-  auto status = addQueryEntry(queryID, qr, "ONETIME");
+  auto query_id = generateQueryId();
+
+  auto status =
+      addQueryEntry(d->database_interface, d->context, query_id, qr, "ONETIME");
   if (!status.ok()) {
     LOG(WARNING) << status.getMessage();
     return "";
   }
-  return queryID;
+
+  return query_id;
 }
 
 osquery::Status QueryManager::addScheduleQueryEntry(
     const SubscriptionRequest& qr) {
-  const auto queryID = "zeek_" + std::to_string(d->nextUID++);
-  return addQueryEntry(queryID, qr, "SCHEDULE");
-}
+  auto query_id = generateQueryId();
 
-osquery::Status QueryManager::addQueryEntry(const std::string& queryID,
-                                            const SubscriptionRequest& qr,
-                                            const std::string& qtype) {
-  const auto& query = qr.query;
-  const auto& cookie = qr.cookie;
-  const auto& response_event = qr.response_event;
-  const auto& response_topic = qr.response_topic;
-  const int& interval = qr.interval;
-  const bool& added = qr.added;
-  const bool& removed = qr.removed;
-  const bool& snapshot = qr.snapshot;
-  if (d->schedule_queries.count(queryID) > 0 or
-      d->one_time_queries.count(queryID) > 0) {
-    return osquery::Status::failure("QueryID '" + queryID + "' already exists");
-  }
-
-  if (qtype == "SCHEDULE") {
-    // Ensure no database artifacts
-    purgeQuery(queryID);
-    d->schedule_queries[queryID] =
-        ScheduleQueryEntry{queryID, query, interval, added, removed, snapshot};
-  } else if (qtype == "ONETIME") {
-    d->one_time_queries[queryID] = OneTimeQueryEntry{queryID, query};
-  } else {
-    return osquery::Status::failure("Unknown query type '" + qtype + "'");
-  }
-
-  d->event_cookies[queryID] = cookie;
-  d->event_names[queryID] = response_event;
-  d->event_topics[queryID] = response_topic;
-  return osquery::Status::success();
+  return addQueryEntry(
+      d->database_interface, d->context, query_id, qr, "SCHEDULE");
 }
 
 std::string QueryManager::findIDForQuery(const std::string& query) {
   // Search the queryID for this specific query
-  for (const auto& e : d->schedule_queries) {
+  for (const auto& e : d->context.schedule_queries) {
     const auto& queryID = e.first;
     const ScheduleQueryEntry& bqe = e.second;
     if (std::get<1>(bqe) == query) {
@@ -129,7 +94,7 @@ std::string QueryManager::findIDForQuery(const std::string& query) {
     }
   }
 
-  for (const auto& e : d->one_time_queries) {
+  for (const auto& e : d->context.one_time_queries) {
     const auto& queryID = e.first;
     const OneTimeQueryEntry& bqe = e.second;
     if (std::get<1>(bqe) == query) {
@@ -142,12 +107,12 @@ std::string QueryManager::findIDForQuery(const std::string& query) {
 osquery::Status QueryManager::findQueryAndType(const std::string& queryID,
                                                std::string& qtype,
                                                std::string& query) {
-  if (d->schedule_queries.count(queryID) > 0) {
+  if (d->context.schedule_queries.count(queryID) > 0) {
     qtype = "SCHEDULE";
-    query = std::get<1>(d->schedule_queries.at(queryID));
-  } else if (d->one_time_queries.count(queryID) > 0) {
+    query = std::get<1>(d->context.schedule_queries.at(queryID));
+  } else if (d->context.one_time_queries.count(queryID) > 0) {
     qtype = "ONETIME";
-    query = std::get<1>(d->one_time_queries.at(queryID));
+    query = std::get<1>(d->context.one_time_queries.at(queryID));
   } else {
     return osquery::Status::failure("QueryID '" + queryID +
                                     "' not in brokerQueries");
@@ -163,48 +128,34 @@ osquery::Status QueryManager::removeQueryEntry(const std::string& query) {
   }
 
   // Delete query info
-  d->event_cookies.erase(queryID);
-  d->event_topics.erase(queryID);
-  d->event_names.erase(queryID);
-  if (d->schedule_queries.count(queryID) >= 1) {
+  d->context.event_cookies.erase(queryID);
+  d->context.event_topics.erase(queryID);
+  d->context.event_names.erase(queryID);
+
+  if (d->context.schedule_queries.count(queryID) >= 1) {
     VLOG(1) << "Deleting schedule query '" << query << "' with queryID '"
             << queryID << "'";
-    d->schedule_queries.erase(queryID);
+
+    d->context.schedule_queries.erase(queryID);
   }
-  if (d->one_time_queries.count(queryID) >= 1) {
+  if (d->context.one_time_queries.count(queryID) >= 1) {
     VLOG(1) << "Deleting onetime query '" << query << "' with queryID '"
             << queryID << "'";
-    d->one_time_queries.erase(queryID);
+
+    d->context.one_time_queries.erase(queryID);
   }
 
   // Purge from database
   // TODO: scheduled queries only?
-  purgeQuery(queryID);
+  purgeScheduledQueryFromDatabase(d->database_interface, queryID);
 
   return osquery::Status::success();
-}
-
-osquery::Status QueryManager::purgeQuery(const std::string& queryID) {
-  // Delete Query
-  auto status =
-      osquery::deleteDatabaseValue(osquery::kQueries, "query." + queryID);
-
-  // Delete Counter
-  status = osquery::deleteDatabaseValue(osquery::kQueries, queryID + "counter");
-
-  // Delete Query Data
-  status = osquery::deleteDatabaseValue(osquery::kQueries, queryID);
-
-  // Delete Epoch
-  status = osquery::deleteDatabaseValue(osquery::kQueries, queryID + "epoch");
-
-  return status;
 }
 
 std::string QueryManager::getQueryConfigString() {
   // Format each query
   std::vector<std::string> scheduleQ;
-  for (const auto& bq : d->schedule_queries) {
+  for (const auto& bq : d->context.schedule_queries) {
     auto i = bq.second;
     std::stringstream ss;
     ss << "\"" << std::get<0>(i) << "\": {\"query\": \"" << std::get<1>(i)
@@ -251,37 +202,102 @@ osquery::Status QueryManager::updateSchedule() {
 }
 
 std::string QueryManager::getEventCookie(const std::string& queryID) {
-  return d->event_cookies.at(queryID);
+  return d->context.event_cookies.at(queryID);
 }
 
 std::string QueryManager::getEventName(const std::string& queryID) {
-  return d->event_names.at(queryID);
+  return d->context.event_names.at(queryID);
 }
 
 std::string QueryManager::getEventTopic(const std::string& queryID) {
-  return d->event_topics.at(queryID);
+  return d->context.event_topics.at(queryID);
 }
 
 std::vector<std::string> QueryManager::getQueryIDs() {
   // Collect queryIDs
   std::vector<std::string> queryIDs;
-  for (const auto& id : d->schedule_queries) {
+  for (const auto& id : d->context.schedule_queries) {
     queryIDs.push_back(id.first);
   }
-  for (const auto& id : d->one_time_queries) {
+  for (const auto& id : d->context.one_time_queries) {
     queryIDs.push_back(id.first);
   }
 
   return queryIDs;
 }
 
+std::string QueryManager::generateQueryId() {
+  return "zeek_" + std::to_string(d->nextUID++);
+}
+
+osquery::Status QueryManager::addQueryEntry(
+    DatabaseInterfaceRef database_interface,
+    QueryManager::Context& context,
+    const std::string& query_id,
+    const SubscriptionRequest& qr,
+    const std::string& qtype) {
+  if (context.schedule_queries.count(query_id) > 0 or
+      context.one_time_queries.count(query_id) > 0) {
+    return osquery::Status::failure("QueryID '" + query_id +
+                                    "' already exists");
+  }
+
+  if (qtype == "SCHEDULE") {
+    purgeScheduledQueryFromDatabase(database_interface, query_id);
+
+    context.schedule_queries[query_id] = ScheduleQueryEntry{
+        query_id, qr.query, qr.interval, qr.added, qr.removed, qr.snapshot};
+
+  } else if (qtype == "ONETIME") {
+    context.one_time_queries[query_id] = OneTimeQueryEntry{query_id, qr.query};
+
+  } else {
+    return osquery::Status::failure("Unknown query type '" + qtype + "'");
+  }
+
+  context.event_cookies[query_id] = qr.cookie;
+  context.event_names[query_id] = qr.response_event;
+  context.event_topics[query_id] = qr.response_topic;
+
+  return osquery::Status::success();
+}
+
+void QueryManager::purgeScheduledQueryFromDatabase(
+    DatabaseInterfaceRef database_interface, const std::string& query_id) {
+  // clang-format off
+  std::vector<std::string> key_name_list = {
+    // Query
+    "query." + query_id,
+
+    // Counter
+    query_id + "counter",
+
+    // Query data
+    query_id,
+
+    // Epoch
+    query_id + "epoch"
+  };
+  // clang-format on
+
+  for (const auto& key_name : key_name_list) {
+    auto status = database_interface->deleteKey(osquery::kQueries, key_name);
+    if (!status.ok()) {
+      VLOG(1) << "Failed to erase the following database key: " << key_name
+              << " (" << status.getMessage() << ")";
+    }
+  }
+}
+
 osquery::Status IQueryManager::create(Ref& ref) {
   try {
     ref.reset();
 
-    auto ptr = new QueryManager();
-    ref.reset(ptr);
+    std::shared_ptr<IDatabaseInterface> database_interface(
+        new OsqueryDatabaseInterface);
+    auto ptr = new QueryManager(database_interface);
 
+    ref.reset(ptr);
     return osquery::Status::success();
 
   } catch (const std::bad_alloc&) {

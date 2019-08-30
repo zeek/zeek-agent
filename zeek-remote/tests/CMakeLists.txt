@@ -19,10 +19,15 @@ function(zeekRemoteTests)
     query_manager
   )
 
+  getTargetSourceFileList(zeek-remote zeek_remote_source_file_list)
+
   foreach(target_name ${target_name_list})
     addZeekTest(
       NAME
       "${target_name}"
+
+      TARGET
+        zeek-remote
 
       SOURCES
         "${target_name}.cpp"

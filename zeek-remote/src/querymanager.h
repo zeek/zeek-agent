@@ -10,9 +10,21 @@
 
 #pragma once
 
+#include "idatabaseinterface.h"
+
 #include <zeek-remote/iquerymanager.h>
 
 namespace zeek {
+class OsqueryDatabaseInterface final : public IDatabaseInterface {
+ public:
+  virtual ~OsqueryDatabaseInterface() = default;
+
+  virtual osquery::Status deleteKey(const std::string& domain,
+                                    const std::string& key) const override {
+    osquery::deleteDatabaseValue(domain, key);
+  }
+};
+
 /**
  * @brief Manager class for queries that are received via broker.
  *
@@ -21,6 +33,24 @@ namespace zeek {
  */
 class QueryManager final : public IQueryManager {
  public:
+  struct Context final {
+    // Collection of SQL Schedule Subscription queries, Key: QueryID
+    std::map<std::string, ScheduleQueryEntry> schedule_queries;
+
+    // Collection of SQL One-Time Subscription queries, Key: QueryID
+    std::map<std::string, OneTimeQueryEntry> one_time_queries;
+
+    // Some mapping to maintain the SQL subscriptions
+    //  Key: QueryID, Value: Event Cookie to use for the response
+    std::map<std::string, std::string> event_cookies;
+
+    //  Key: QueryID, Value: Event Name to use for the response
+    std::map<std::string, std::string> event_names;
+
+    //  Key: QueryID, Value: Topic to use for the response
+    std::map<std::string, std::string> event_topics;
+  };
+
   virtual ~QueryManager() override;
 
   // IQueryManager interface
@@ -32,10 +62,6 @@ class QueryManager final : public IQueryManager {
   virtual osquery::Status addScheduleQueryEntry(
       const SubscriptionRequest& qr) override;
 
-  virtual osquery::Status addQueryEntry(const std::string& queryID,
-                                        const SubscriptionRequest& qr,
-                                        const std::string& qtype) override;
-
   virtual std::string findIDForQuery(const std::string& query) override;
 
   virtual osquery::Status findQueryAndType(const std::string& queryID,
@@ -43,7 +69,6 @@ class QueryManager final : public IQueryManager {
                                            std::string& query) override;
 
   virtual osquery::Status removeQueryEntry(const std::string& query) override;
-  virtual osquery::Status purgeQuery(const std::string& query) override;
   virtual std::string getQueryConfigString() override;
   virtual osquery::Status updateSchedule() override;
   virtual std::string getEventCookie(const std::string& queryID) override;
@@ -52,11 +77,33 @@ class QueryManager final : public IQueryManager {
   virtual std::vector<std::string> getQueryIDs() override;
 
  protected:
-  QueryManager();
+  QueryManager(DatabaseInterfaceRef database_interface);
 
  private:
   struct PrivateData;
   std::unique_ptr<PrivateData> d;
+
+  std::string generateQueryId();
+
+ public:
+  /**
+   * @brief Add a query to tracking with fixed properties
+   *
+   * @param queryID the queryID to use for this query
+   * @param qr the subscription request for this query
+   * @param qtype the type of the query ("SCHEDULE" or "ONETIME")
+   * @return
+   */
+
+  static osquery::Status addQueryEntry(DatabaseInterfaceRef database_interface,
+                                       Context& context,
+                                       const std::string& query_id,
+                                       const SubscriptionRequest& qr,
+                                       const std::string& qtype);
+
+  /// Remove all references to the query from the database
+  static void purgeScheduledQueryFromDatabase(
+      DatabaseInterfaceRef database_interface, const std::string& query_id);
 
   friend class IQueryManager;
 };

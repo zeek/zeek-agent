@@ -9,8 +9,9 @@
 cmake_minimum_required(VERSION 3.10)
 
 function(zeekRemoteMain)
-  add_subdirectory(tests)
   generateZeekRemote()
+
+  add_subdirectory(tests)
 endfunction()
 
 function(generateZeekRemote)
@@ -19,6 +20,8 @@ function(generateZeekRemote)
     include/zeek-remote/iquerymanager.h
     include/zeek-remote/types.h
     include/zeek-remote/utils.h
+
+    src/idatabaseinterface.h
 
     src/brokermanager.h
     src/brokermanager.cpp

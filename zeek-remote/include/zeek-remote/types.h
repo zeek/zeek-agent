@@ -74,14 +74,20 @@ typedef std::tuple<std::string, std::string> OneTimeQueryEntry;
  * query request and to hold its parameters. This definition is valid for all
  * request types in BrokerRequestType.
  */
-struct SubscriptionRequest {
-  std::string query; // The requested SQL query
-  std::string response_event; // The event name for the response event
-  std::string response_topic; // The topic name for the response event
-  std::string cookie = "";
-  uint64_t interval = 10;
-  bool added = true;
-  bool removed = false;
-  bool snapshot = false;
+struct SubscriptionRequest final {
+  // The requested SQL query
+  std::string query;
+
+  // The event name for the response event
+  std::string response_event;
+
+  // The topic name for the response event
+  std::string response_topic;
+
+  std::string cookie;
+  uint64_t interval{10U};
+  bool added{true};
+  bool removed{false};
+  bool snapshot{false};
 };
 } // namespace zeek

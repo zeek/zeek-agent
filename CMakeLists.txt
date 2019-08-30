@@ -55,15 +55,17 @@ function(addZeekTest)
   cmake_parse_arguments(
     ARGS
     ""
-    "NAME"
+    "NAME;TARGET"
     "SOURCES;LINK_LIBRARIES;INCLUDE_DIRECTORIES"
     ${ARGN}
   )
 
-  set(ARGS_NAME "${ARGS_NAME}_test")
+  getTargetSourceFileList("${ARGS_TARGET}" additional_source_file_list)
 
+  set(ARGS_NAME "${ARGS_NAME}_test")
   add_executable("${ARGS_NAME}"
     ${ARGS_SOURCES}
+    ${additional_source_file_list}
   )
 
   if(NOT "${ARGS_INCLUDE_DIRECTORIES}" STREQUAL "")
@@ -75,6 +77,9 @@ function(addZeekTest)
   target_link_libraries("${ARGS_NAME}" PRIVATE
     thirdparty_googletest
     zeek_cxx_settings
+    libosquery
+    c++abi
+
     ${ARGS_LINK_LIBRARIES}
   )
 
@@ -92,6 +97,19 @@ function(addZeekTest)
   )
 
   add_dependencies(zeek_tests "${ARGS_NAME}_runner")
+endfunction()
+
+function(getTargetSourceFileList target_name output_variable)
+  get_target_property(source_file_list "${target_name}" SOURCES)
+  get_target_property(source_directory "${target_name}" SOURCE_DIR)
+
+  foreach(source_file ${source_file_list})
+    list(APPEND output
+      "${source_directory}/${source_file}"
+    )
+  endforeach()
+
+  set("${output_variable}" ${output} PARENT_SCOPE)
 endfunction()
 
 osqueryZeekMain()
