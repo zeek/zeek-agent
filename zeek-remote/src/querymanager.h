@@ -62,8 +62,6 @@ class QueryManager final : public IQueryManager {
   virtual osquery::Status addScheduleQueryEntry(
       const SubscriptionRequest& qr) override;
 
-  virtual std::string findIDForQuery(const std::string& query) override;
-
   virtual osquery::Status findQueryAndType(const std::string& queryID,
                                            std::string& qtype,
                                            std::string& query) override;
@@ -109,6 +107,14 @@ class QueryManager final : public IQueryManager {
 
   /// Get a vector of all currently tracked queryIDs
   static std::vector<std::string> getQueryIDs(const Context& context);
+
+  static std::string findIDForQuery(const Context& context,
+                                    const std::string& query);
+
+  static osquery::Status removeQueryEntry(
+      DatabaseInterfaceRef database_interface,
+      Context& context,
+      const std::string& query);
 
   friend class IQueryManager;
 };

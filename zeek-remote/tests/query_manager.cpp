@@ -269,4 +269,24 @@ TEST(QueryManager, getQueryIDs) {
     ASSERT_TRUE(it != query_id_list.end());
   }
 }
+
+TEST(QueryManager, findIDForQuery) {
+  const std::string kQueryId01{"01"};
+  const std::string kQueryString01{"SELECT * FROM processes;"};
+
+  const std::string kQueryId02{"02"};
+  const std::string kQueryString02{"SELECT * FROM users;"};
+
+  QueryManager::Context context;
+  context.schedule_queries.insert(
+      {kQueryId01, {kQueryId01, kQueryString01, 10, true, false, false}});
+
+  context.one_time_queries.insert({kQueryId02, {kQueryId02, kQueryString02}});
+
+  auto id = QueryManager::findIDForQuery(context, kQueryString01);
+  EXPECT_EQ(id, kQueryId01);
+
+  id = QueryManager::findIDForQuery(context, kQueryString02);
+  EXPECT_EQ(id, kQueryId02);
+}
 } // namespace zeek

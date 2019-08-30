@@ -60,9 +60,6 @@ class IQueryManager : private boost::noncopyable {
   virtual osquery::Status addScheduleQueryEntry(
       const SubscriptionRequest& qr) = 0;
 
-  /// Find the queryID for a query that is tracked given by the query string
-  virtual std::string findIDForQuery(const std::string& query) = 0;
-
   /// Find the query string and the query type for a query that is tracked given
   /// by the queryID
   virtual osquery::Status findQueryAndType(const std::string& queryID,
