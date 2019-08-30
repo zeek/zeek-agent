@@ -36,6 +36,126 @@ class TestDatabaseInterface final : public IDatabaseInterface {
   }
 };
 
+TEST(QueryManager, addQueryEntry) {
+  const std::string kQueryId{"dummy_query_id"};
+  const std::string kQueryString{"SELECT * FROM processes"};
+  const std::string kResponseEvent{"response_event"};
+  const std::string kResponseTopic{"response_topic"};
+  const std::string kCookie{"cookie"};
+  const std::uint64_t kInterval{10U};
+  const bool kAdded{false};
+  const bool kRemoved{false};
+  const bool kSnapshot{false};
+
+  // clang-format off
+  SubscriptionRequest base_subscription_request = {
+    kQueryString,
+    kResponseEvent,
+    kResponseTopic,
+    kCookie,
+    kInterval,
+    kAdded,
+    kRemoved,
+    kSnapshot
+  };
+  // clang-format on
+
+  {
+    auto test_database_interface = new TestDatabaseInterface;
+
+    // clang-format off
+    test_database_interface->key_list = {
+      // Query
+      "query." + kQueryId,
+
+      // Counter
+      kQueryId + "counter",
+
+      // Query data
+      kQueryId,
+
+      // Epoch
+      kQueryId + "epoch"
+    };
+    // clang-format on
+
+    std::shared_ptr<IDatabaseInterface> database_interface(
+        test_database_interface);
+
+    QueryManager::Context context;
+    auto status = QueryManager::addQueryEntry(database_interface,
+                                              context,
+                                              kQueryId,
+                                              base_subscription_request,
+                                              "SCHEDULE");
+
+    ASSERT_TRUE(status.ok());
+    ASSERT_TRUE(test_database_interface->key_list.empty());
+
+    ASSERT_EQ(context.schedule_queries.size(), 1U);
+    ASSERT_TRUE(context.schedule_queries.find(kQueryId) !=
+                context.schedule_queries.end());
+
+    const auto& entry = context.schedule_queries.at(kQueryId);
+
+    ASSERT_EQ(std::get<0>(entry), kQueryId);
+    ASSERT_EQ(std::get<1>(entry), kQueryString);
+    ASSERT_EQ(std::get<2>(entry), static_cast<std::uint64_t>(kInterval));
+    ASSERT_EQ(std::get<3>(entry), kAdded);
+    ASSERT_EQ(std::get<4>(entry), kRemoved);
+    ASSERT_EQ(std::get<5>(entry), kSnapshot);
+  }
+
+  {
+    auto database_interface = std::make_shared<TestDatabaseInterface>();
+
+    QueryManager::Context context;
+    auto status = QueryManager::addQueryEntry(database_interface,
+                                              context,
+                                              kQueryId,
+                                              base_subscription_request,
+                                              "ONETIME");
+
+    ASSERT_TRUE(status.ok());
+    ASSERT_EQ(context.one_time_queries.size(), 1U);
+    ASSERT_TRUE(context.one_time_queries.find(kQueryId) !=
+                context.one_time_queries.end());
+
+    const auto& entry = context.one_time_queries.at(kQueryId);
+
+    ASSERT_EQ(std::get<0>(entry), kQueryId);
+    ASSERT_EQ(std::get<1>(entry), kQueryString);
+  }
+
+  {
+    auto database_interface = std::make_shared<TestDatabaseInterface>();
+
+    QueryManager::Context context;
+    auto status = QueryManager::addQueryEntry(database_interface,
+                                              context,
+                                              kQueryId,
+                                              base_subscription_request,
+                                              "XXXXXX");
+
+    ASSERT_FALSE(status.ok());
+  }
+
+  {
+    auto database_interface = std::make_shared<TestDatabaseInterface>();
+
+    QueryManager::Context context;
+    context.schedule_queries[kQueryId] = {};
+
+    auto status = QueryManager::addQueryEntry(database_interface,
+                                              context,
+                                              kQueryId,
+                                              base_subscription_request,
+                                              "SCHEDULE");
+
+    ASSERT_FALSE(status.ok());
+  }
+}
+
 TEST(QueryManager, purgeScheduledQueryFromDatabase) {
   auto test_database_interface = new TestDatabaseInterface;
 

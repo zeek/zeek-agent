@@ -68,6 +68,7 @@ std::string QueryManager::addOneTimeQueryEntry(const SubscriptionRequest& qr) {
 
   auto status =
       addQueryEntry(d->database_interface, d->context, query_id, qr, "ONETIME");
+
   if (!status.ok()) {
     LOG(WARNING) << status.getMessage();
     return "";
