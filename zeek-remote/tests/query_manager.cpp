@@ -289,4 +289,54 @@ TEST(QueryManager, findIDForQuery) {
   id = QueryManager::findIDForQuery(context, kQueryString02);
   EXPECT_EQ(id, kQueryId02);
 }
+
+TEST(QueryManager, removeQueryEntry) {
+  const std::string kQueryId{"01"};
+  const std::string kQueryString{"SELECT * FROM processes;"};
+
+  auto test_database_interface = new TestDatabaseInterface;
+
+  // clang-format off
+  test_database_interface->key_list = {
+    // Query
+    "query." + kQueryId,
+
+    // Counter
+    kQueryId + "counter",
+
+    // Query data
+    kQueryId,
+
+    // Epoch
+    kQueryId + "epoch"
+  };
+  // clang-format on
+
+  std::shared_ptr<IDatabaseInterface> database_interface(
+      test_database_interface);
+
+  QueryManager::Context context;
+
+  context.schedule_queries.insert(
+      {kQueryId, {kQueryId, kQueryString, 10, true, false, false}});
+
+  auto status =
+      QueryManager::removeQueryEntry(database_interface, context, kQueryString);
+
+  ASSERT_TRUE(status.ok());
+  ASSERT_TRUE(test_database_interface->key_list.empty());
+  ASSERT_TRUE(context.schedule_queries.empty());
+
+  context.one_time_queries.insert({kQueryId, {kQueryId, kQueryString}});
+  status =
+      QueryManager::removeQueryEntry(database_interface, context, kQueryString);
+
+  ASSERT_TRUE(status.ok());
+  ASSERT_TRUE(context.one_time_queries.empty());
+
+  status = QueryManager::removeQueryEntry(
+      database_interface, context, "Dummy string");
+
+  ASSERT_FALSE(status.ok());
+}
 } // namespace zeek

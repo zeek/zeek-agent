@@ -293,6 +293,7 @@ osquery::Status QueryManager::removeQueryEntry(
 
     context.schedule_queries.erase(queryID);
   }
+
   if (context.one_time_queries.count(queryID) >= 1) {
     VLOG(1) << "Deleting onetime query '" << query << "' with queryID '"
             << queryID << "'";
