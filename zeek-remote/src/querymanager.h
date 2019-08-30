@@ -116,6 +116,11 @@ class QueryManager final : public IQueryManager {
       Context& context,
       const std::string& query);
 
+  static osquery::Status findQueryAndType(const Context& context,
+                                          const std::string& queryID,
+                                          std::string& qtype,
+                                          std::string& query);
+
   friend class IQueryManager;
 };
 } // namespace zeek

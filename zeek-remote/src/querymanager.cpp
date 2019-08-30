@@ -23,6 +23,7 @@
 
 namespace zeek {
 struct QueryManager::PrivateData final {
+  // Holds instance data
   Context context;
 
   // Interface used to read, delete and write keys into the
@@ -41,23 +42,14 @@ QueryManager::QueryManager(DatabaseInterfaceRef database_interface)
 QueryManager::~QueryManager() {}
 
 osquery::Status QueryManager::reset() {
-  auto queryIDs = getQueryIDs(d->context);
+  auto query_id_list = getQueryIDs(d->context);
 
-  // Collect query strings
-  std::vector<std::string> queries;
-  for (const auto& id : d->context.schedule_queries) {
-    queries.push_back(std::get<1>(id.second));
-  }
+  for (const auto& query_id : query_id_list) {
+    std::string query_type;
+    std::string query_string;
 
-  for (const auto& id : d->context.one_time_queries) {
-    queries.push_back(std::get<1>(id.second));
-  }
-
-  for (const auto& queryID : queryIDs) {
-    std::string query;
-    std::string qType;
-    findQueryAndType(queryID, qType, query);
-    removeQueryEntry(query);
+    findQueryAndType(query_id, query_type, query_string);
+    removeQueryEntry(query_string);
   }
 
   return osquery::Status::success();
@@ -88,17 +80,7 @@ osquery::Status QueryManager::addScheduleQueryEntry(
 osquery::Status QueryManager::findQueryAndType(const std::string& queryID,
                                                std::string& qtype,
                                                std::string& query) {
-  if (d->context.schedule_queries.count(queryID) > 0) {
-    qtype = "SCHEDULE";
-    query = std::get<1>(d->context.schedule_queries.at(queryID));
-  } else if (d->context.one_time_queries.count(queryID) > 0) {
-    qtype = "ONETIME";
-    query = std::get<1>(d->context.one_time_queries.at(queryID));
-  } else {
-    return osquery::Status::failure("QueryID '" + queryID +
-                                    "' not in brokerQueries");
-  }
-  return osquery::Status::success();
+  return findQueryAndType(d->context, queryID, qtype, query);
 }
 
 osquery::Status QueryManager::removeQueryEntry(const std::string& query) {
@@ -304,6 +286,29 @@ osquery::Status QueryManager::removeQueryEntry(
   // Purge from database
   // TODO: scheduled queries only?
   purgeScheduledQueryFromDatabase(database_interface, queryID);
+
+  return osquery::Status::success();
+}
+
+osquery::Status QueryManager::findQueryAndType(const Context& context,
+                                               const std::string& query_id,
+                                               std::string& query_type,
+                                               std::string& query_string) {
+  query_type = {};
+  query_string = {};
+
+  if (context.schedule_queries.count(query_id) > 0) {
+    query_type = "SCHEDULE";
+    query_string = std::get<1>(context.schedule_queries.at(query_id));
+
+  } else if (context.one_time_queries.count(query_id) > 0) {
+    query_type = "ONETIME";
+    query_string = std::get<1>(context.one_time_queries.at(query_id));
+
+  } else {
+    return osquery::Status::failure("QueryID '" + query_id +
+                                    "' not in brokerQueries");
+  }
 
   return osquery::Status::success();
 }

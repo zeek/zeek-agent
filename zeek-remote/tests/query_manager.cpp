@@ -339,4 +339,42 @@ TEST(QueryManager, removeQueryEntry) {
 
   ASSERT_FALSE(status.ok());
 }
+
+TEST(QueryManager, findQueryAndType) {
+  const std::string kQueryId01{"01"};
+  const std::string kQueryString01{"SELECT * FROM processes;"};
+
+  const std::string kQueryId02{"02"};
+  const std::string kQueryString02{"SELECT * FROM users;"};
+
+  QueryManager::Context context;
+  context.schedule_queries.insert(
+      {kQueryId01, {kQueryId01, kQueryString01, 10, true, false, false}});
+
+  context.one_time_queries.insert({kQueryId02, {kQueryId02, kQueryString02}});
+
+  std::string query_type;
+  std::string query_string;
+
+  auto status = QueryManager::findQueryAndType(
+      context, kQueryId01, query_type, query_string);
+
+  ASSERT_TRUE(status.ok());
+  ASSERT_EQ(query_type, "SCHEDULE");
+  ASSERT_EQ(query_string, kQueryString01);
+
+  status = QueryManager::findQueryAndType(
+      context, kQueryId02, query_type, query_string);
+
+  ASSERT_TRUE(status.ok());
+  ASSERT_EQ(query_type, "ONETIME");
+  ASSERT_EQ(query_string, kQueryString02);
+
+  status = QueryManager::findQueryAndType(
+      context, "dummy", query_type, query_string);
+
+  ASSERT_FALSE(status.ok());
+  ASSERT_TRUE(query_type.empty());
+  ASSERT_TRUE(query_string.empty());
+}
 } // namespace zeek
