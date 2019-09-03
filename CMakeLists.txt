@@ -23,6 +23,7 @@ function(osqueryZeekMain)
   generateZeekSettingsTarget()
   geneateZeekTestsTarget()
   generateClangTidyTarget()
+  generateCppcheckTarget()
 
   set(subdirectory_list
     libraries

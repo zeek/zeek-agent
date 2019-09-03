@@ -70,3 +70,57 @@ function(generateClangTidyTarget)
 
   message(STATUS "clang-tidy: Enabled on osquery-zeek")
 endfunction()
+
+function(generateCppcheckTarget)
+  if(NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+    message(STATUS "cppcheck: Disabled, because the current platform is not supported")
+    return()
+  endif()
+
+  if(NOT CMAKE_EXPORT_COMPILE_COMMANDS)
+    message(STATUS "cppcheck: Disabled, because CMAKE_EXPORT_COMPILE_COMMANDS was set to false")
+    return()
+  endif()
+
+  find_program(
+    ZEEK_CPPCHECK_PATH
+    cppcheck
+  )
+
+  if("${ZEEK_CPPCHECK_PATH}" STREQUAL "")
+    message(STATUS "cppcheck: Disabled, because the cppcheck executable could not be found")
+    return()
+  endif()
+
+  if(NOT ZEEK_BUILD_TESTING)
+    message(WARNING "cppcheck: Zeek tests will not be checked, because ZEEK_BUILD_TESTING is set to false)")
+  endif()
+
+  set(cppcheck_arguments
+    "--project=compile_commands.json"
+    "--std=c++14"
+  )
+
+  set(ignored_path_list
+    "${CMAKE_SOURCE_DIR}/osquery"
+    "${CMAKE_SOURCE_DIR}/third-party"
+    "${CMAKE_CURRENT_SOURCE_DIR}/libraries"
+  )
+
+  foreach(ignored_path ${ignored_path_list})
+    list(APPEND cppcheck_arguments
+      "-i"
+      "${ignored_path}"
+    )
+  endforeach()
+
+  add_custom_target(
+    zeek_cppcheck
+    COMMAND "${ZEEK_CPPCHECK_PATH}" ${cppcheck_arguments}
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    COMMENT "Running cppcheck on osquery-zeek..."
+    VERBATIM
+  )
+
+  message(STATUS "cppcheck: Enabled on osquery-zeek")
+endfunction()

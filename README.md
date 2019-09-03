@@ -29,6 +29,12 @@ It is possible to automatically compile and run them by building the `run_zeek_t
 
 The `zeek_tidy` target can be built to run clang-tidy on the extension code. If you are on Ubuntu 18, you should install the `clang` package (to solve a symlink issue in the system include folder) and the `clang-tidy-8` from the package manager.
 
+# Running cppcheck
+
+When the `cppcheck` tool is available, the `zeek_cppcheck` target can be built to run cppcheck against the extension source files.
+
+Note: It's better not to use the one provided by the osquery toolchain (/usr/local/osquery/bin/cppcheck) as it's outdated and does not support the `compile_commands.json` format.
+
 # Installing Zeek
 ## Main program files
 The Zeek install instructions can be found [on the official website](https://zeek.org/download/packages.html).
