@@ -19,6 +19,16 @@ The original code has been implemented by [iBigQ](https://github.com/iBigQ) and 
 
 Once built, the extension executable can be found at the following path: `osquery-extension-sdk-env/build/linux/external/extension_osquery-zeek/zeek-extension/osquery-zeek.ext`
 
+# Running the tests
+
+The `zeek_tests` target can be used to build the tests if the `ZEEK_BUILD_TESTING` CMake option has been enabled. When using the old osquery 3.x SDK, this setting has to be exported as an environment variable.
+
+It is possible to automatically compile and run them by building the `run_zeek_tests` target.
+
+# Running clang-tidy
+
+The `zeek_tidy` target can be built to run clang-tidy on the extension code. If you are on Ubuntu 18, you should install the `clang` package (to solve a symlink issue in the system include folder) and the `clang-tidy-8` from the package manager.
+
 # Installing Zeek
 ## Main program files
 The Zeek install instructions can be found [on the official website](https://zeek.org/download/packages.html).

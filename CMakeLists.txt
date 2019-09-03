@@ -9,6 +9,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(osquery-zeek)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS true CACHE BOOL "Set to true to generate the compile_commands.json file" FORCE)
+
 include(cmake/utils.cmake)
 include(cmake/options.cmake)
 
@@ -20,6 +22,7 @@ function(osqueryZeekMain)
 
   generateZeekSettingsTarget()
   geneateZeekTestsTarget()
+  generateClangTidyTarget()
 
   set(subdirectory_list
     libraries
