@@ -45,9 +45,6 @@ class BrokerManager final : public IBrokerManager {
   /// Set a node ID if not already exists
   osquery::Status setNodeID(const std::string& uid);
 
-  /// Create a new broker endpoint
-  osquery::Status createEndpoint(const std::string& ep_name);
-
   /// Initiates the peering to remote endpoint
   osquery::Status initiatePeering();
 

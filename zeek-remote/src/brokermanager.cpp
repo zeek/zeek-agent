@@ -41,7 +41,7 @@ struct BrokerManager::PrivateData final {
   // A pointer to a shared query manager instance
   IQueryManager::Ref query_manager;
 
-  // Mutex to synchronize threats that check connection state
+  // Mutex to synchronize threads that check connection state
   mutable osquery::Mutex connection_mutex;
 
   // The IP and port of the remote endpoint
@@ -90,11 +90,7 @@ BrokerManager::BrokerManager(const std::string& server_address,
       std::pair<std::string, int>(d->server_address, d->server_port);
 
   // Create Broker endpoint
-  auto s = createEndpoint(uid);
-  if (!s.ok()) {
-    LOG(ERROR) << "Failed to create broker endpoint";
-    throw std::runtime_error{"Broker endpoint cannot be created"};
-  }
+  d->ep = std::make_unique<broker::endpoint>();
 }
 
 BrokerManager::~BrokerManager() {
@@ -176,15 +172,6 @@ osquery::Status BrokerManager::removeGroup(const std::string& group) {
 
 std::vector<std::string> BrokerManager::getGroups() {
   return d->groups;
-}
-
-osquery::Status BrokerManager::createEndpoint(const std::string& ep_name) {
-  if (d->ep != nullptr) {
-    return osquery::Status::failure("Broker Endpoint already exists");
-  }
-
-  d->ep = std::make_unique<broker::endpoint>();
-  return osquery::Status::success();
 }
 
 osquery::Status BrokerManager::createSubscriber(const std::string& topic) {
