@@ -117,10 +117,6 @@ osquery::Status BrokerManager::reset(bool groups_only) {
   return osquery::Status::success();
 }
 
-std::string BrokerManager::getNodeID() {
-  return d->nodeID;
-}
-
 osquery::Status BrokerManager::addGroup(const std::string& group) {
   auto s = createSubscriber(BrokerTopics::PRE_GROUPS + group);
   if (not s.ok()) {
@@ -280,7 +276,7 @@ osquery::Status BrokerManager::initiateReset(bool reset_schedule) {
     return s;
   }
   // Subscribe to individual topic
-  s = createSubscriber(BrokerTopics::PRE_INDIVIDUALS + getNodeID());
+  s = createSubscriber(BrokerTopics::PRE_INDIVIDUALS + d->nodeID);
   if (!s.ok()) {
     return s;
   }
@@ -354,7 +350,7 @@ osquery::Status BrokerManager::announce() {
   broker::bro::Event announceMsg(
       BrokerEvents::HOST_NEW,
       {broker::data(caf::to_string(d->ep->node_id())),
-       broker::data(getNodeID()),
+       broker::data(d->nodeID),
        group_list});
   auto s = sendEvent(BrokerTopics::ANNOUNCE, announceMsg);
   if (!s.ok()) {
@@ -415,7 +411,6 @@ osquery::Status BrokerManager::logQueryLogItemToZeek(
   }
 
   // Common message fields
-  const auto& uid = getNodeID();
   const auto& topic = d->query_manager->getEventTopic(queryID);
   const auto& event_name = d->query_manager->getEventName(queryID);
   VLOG(1) << "Creating " << rows.size() << " messages with event name '"
@@ -430,7 +425,7 @@ osquery::Status BrokerManager::logQueryLogItemToZeek(
     // Create message data header
     broker::vector msg_data;
     broker::vector result_info(
-        {broker::data(uid),
+        {broker::data(d->nodeID),
          broker::data(broker::data(broker::enum_value{"osquery::" + trigger})),
          broker::data(d->query_manager->getEventCookie(queryID))});
     msg_data.push_back(broker::data(result_info));

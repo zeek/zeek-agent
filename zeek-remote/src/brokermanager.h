@@ -71,7 +71,6 @@ class BrokerManager final : public IBrokerManager {
 
   // IBrokerManager interface
   virtual osquery::Status reset(bool groups_only = true) override;
-  virtual std::string getNodeID() override;
   virtual osquery::Status addGroup(const std::string& group) override;
   virtual osquery::Status removeGroup(const std::string& group) override;
   virtual std::vector<std::string> getGroups() override;

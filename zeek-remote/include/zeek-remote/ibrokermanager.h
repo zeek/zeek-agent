@@ -61,9 +61,6 @@ class IBrokerManager {
    */
   virtual osquery::Status reset(bool groups_only = true) = 0;
 
-  /// Get the ID of this osquery hosts uses
-  virtual std::string getNodeID() = 0;
-
   /**
    * @brief Make the osquery host to join a group.
    *
