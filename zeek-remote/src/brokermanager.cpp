@@ -34,10 +34,6 @@
 
 namespace zeek {
 struct BrokerManager::PrivateData final {
-  // Server address and port, taken from the Zeek configuration file
-  std::string server_address;
-  std::uint16_t server_port{9999U};
-
   // A pointer to a shared query manager instance
   IQueryManager::Ref query_manager;
 
@@ -45,7 +41,7 @@ struct BrokerManager::PrivateData final {
   mutable osquery::Mutex connection_mutex;
 
   // The IP and port of the remote endpoint
-  std::pair<std::string, int> remote_endpoint{"", 0};
+  std::pair<std::string, std::uint16_t> remote_endpoint{"", 0};
 
   // The status_subscriber of the endpoint
   std::unique_ptr<broker::status_subscriber> ss{nullptr};
@@ -74,8 +70,6 @@ BrokerManager::BrokerManager(const std::string& server_address,
                              const std::vector<std::string>& server_group_list,
                              IQueryManager::Ref query_manager)
     : d(new PrivateData) {
-  d->server_address = server_address;
-  d->server_port = server_port;
   d->startup_groups = server_group_list;
   d->query_manager = query_manager;
 
@@ -83,8 +77,7 @@ BrokerManager::BrokerManager(const std::string& server_address,
   d->nodeID = osquery::getHostIdentifier();
 
   // Read remote endpoint from config
-  d->remote_endpoint =
-      std::pair<std::string, int>(d->server_address, d->server_port);
+  d->remote_endpoint = std::make_pair(server_address, server_port);
 
   // Create Broker endpoint
   d->ep = std::make_unique<broker::endpoint>();
