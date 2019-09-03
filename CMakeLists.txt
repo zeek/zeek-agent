@@ -35,6 +35,8 @@ endfunction()
 function(geneateZeekTestsTarget)
   if(ZEEK_BUILD_TESTING)
     add_custom_target(zeek_tests)
+    add_custom_target(run_zeek_tests)
+
     message(STATUS "osquery-zeek tests are enabled")
 
   else()
@@ -83,6 +85,8 @@ function(addZeekTest)
     ${ARGS_LINK_LIBRARIES}
   )
 
+  add_dependencies(zeek_tests "${ARGS_NAME}")
+
   add_custom_target(
     "${ARGS_NAME}_runner"
     COMMAND "$<TARGET_FILE:${ARGS_NAME}>"
@@ -96,7 +100,7 @@ function(addZeekTest)
     "${ARGS_NAME}"
   )
 
-  add_dependencies(zeek_tests "${ARGS_NAME}_runner")
+  add_dependencies(run_zeek_tests "${ARGS_NAME}_runner")
 endfunction()
 
 function(getTargetSourceFileList target_name output_variable)
