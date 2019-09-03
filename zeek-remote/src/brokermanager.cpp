@@ -40,8 +40,11 @@ struct BrokerManager::PrivateData final {
   // Mutex to synchronize threads that check connection state
   mutable osquery::Mutex connection_mutex;
 
-  // The IP and port of the remote endpoint
-  std::pair<std::string, std::uint16_t> remote_endpoint{"", 0};
+  // The Zeek server address
+  std::string server_address;
+
+  // The Zeek server port
+  std::uint16_t server_port{9999U};
 
   // The status_subscriber of the endpoint
   std::unique_ptr<broker::status_subscriber> ss{nullptr};
@@ -72,14 +75,10 @@ BrokerManager::BrokerManager(const std::string& server_address,
     : d(new PrivateData) {
   d->startup_groups = server_group_list;
   d->query_manager = query_manager;
+  d->server_address = server_address;
+  d->server_port = server_port;
 
-  // Set Broker UID
   d->nodeID = osquery::getHostIdentifier();
-
-  // Read remote endpoint from config
-  d->remote_endpoint = std::make_pair(server_address, server_port);
-
-  // Create Broker endpoint
   d->ep = std::make_unique<broker::endpoint>();
 }
 
@@ -205,10 +204,14 @@ osquery::Status BrokerManager::checkConnection(long timeout) {
       LOG(WARNING) << s.getMessage();
     }
 
-    VLOG(1) << "Initializing Peering";
+    LOG(INFO) << "Connecting to Zeek " << d->server_address << ":"
+              << d->server_port;
+
     d->ss = std::make_unique<broker::status_subscriber>(
         d->ep->make_status_subscriber(true));
-    s = initiatePeering();
+
+    d->ep->peer_nosync(
+        d->server_address, d->server_port, broker::timeout::seconds(3));
   }
 
   // Was connected last time we checked?
@@ -248,17 +251,6 @@ osquery::Status BrokerManager::checkConnection(long timeout) {
   }
 
   return s;
-}
-
-osquery::Status BrokerManager::initiatePeering() {
-  auto ip = d->remote_endpoint.first;
-  auto port = d->remote_endpoint.second;
-  LOG(INFO) << "Connecting to Bro " << ip << ":" << port;
-
-  // This call tries to reconnect every X seconds automatically
-  d->ep->peer_nosync(ip, port, broker::timeout::seconds(3));
-
-  return osquery::Status::success();
 }
 
 osquery::Status BrokerManager::initiateReset(bool reset_schedule) {
@@ -379,6 +371,7 @@ osquery::Status BrokerManager::logQueryLogItemToZeek(
     // Might have been unsubscribed from during query execution
     LOG(WARNING) << "Cannot send query results to Bro: "
                  << status_find.getMessage();
+
     return osquery::Status::success();
   }
 
