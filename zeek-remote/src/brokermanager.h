@@ -88,9 +88,6 @@ class BrokerManager final : public IBrokerManager {
   virtual osquery::Status logQueryLogItemToZeek(
       const osquery::QueryLogItem& qli) override;
 
-  virtual osquery::Status sendEvent(const std::string& topic,
-                                    const broker::bro::Event& msg) override;
-
   friend class IBrokerManager;
 };
 } // namespace zeek

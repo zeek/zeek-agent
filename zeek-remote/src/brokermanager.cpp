@@ -192,6 +192,7 @@ std::vector<std::string> BrokerManager::getTopics() {
   for (const auto& mq : d->subscribers) {
     topics.push_back(mq.first);
   }
+
   return topics;
 }
 
@@ -248,6 +249,7 @@ osquery::Status BrokerManager::checkConnection(long timeout) {
 
   // Became successfully connected!
   VLOG(1) << "Broker connection established";
+
   s = announce();
   if (!s.ok()) {
     LOG(ERROR) << s.getMessage();
@@ -271,11 +273,13 @@ osquery::Status BrokerManager::initiateReset(bool reset_schedule) {
   if (!s.ok()) {
     return s;
   }
+
   // Subscribe to individual topic
   s = createSubscriber(BrokerTopics::PRE_INDIVIDUALS + d->nodeID);
   if (!s.ok()) {
     return s;
   }
+
   // Set Startup groups and subscribe to group topics
   for (const auto& g : d->startup_groups) {
     s = addGroup(g);
@@ -335,24 +339,25 @@ std::pair<broker::status, bool> BrokerManager::getPeeringStatus(long timeout) {
 }
 
 osquery::Status BrokerManager::announce() {
-  // Announce this endpoint to be a bro-osquery extension
-  // Collect Groups
+  // Announce this endpoint to be an osquery-zeek extension
   broker::vector group_list;
   for (const auto& g : getGroups()) {
     group_list.push_back(broker::data(g));
   }
 
-  // Create Message
+  // clang-format off
   broker::bro::Event announceMsg(
-      BrokerEvents::HOST_NEW,
-      {broker::data(caf::to_string(d->ep->node_id())),
-       broker::data(d->nodeID),
-       group_list});
-  auto s = sendEvent(BrokerTopics::ANNOUNCE, announceMsg);
-  if (!s.ok()) {
-    return s;
-  }
+    BrokerEvents::HOST_NEW,
 
+    {
+      broker::data(caf::to_string(d->ep->node_id())),
+      broker::data(d->nodeID),
+      group_list
+    }
+  );
+  // clang-format on
+
+  d->ep->publish(BrokerTopics::ANNOUNCE, announceMsg);
   return osquery::Status::success();
 }
 
@@ -510,25 +515,12 @@ osquery::Status BrokerManager::logQueryLogItemToZeek(
 
     // Send event message
     broker::bro::Event msg(event_name, msg_data);
-    sendEvent(topic, msg);
+    d->ep->publish(topic, msg);
   }
 
   // Delete one-time query information
   if (qType == "ONETIME") {
     d->query_manager->removeQueryEntry(query);
-  }
-
-  return osquery::Status::success();
-}
-
-osquery::Status BrokerManager::sendEvent(const std::string& topic,
-                                         const broker::bro::Event& msg) {
-  if (d->ep == nullptr) {
-    return osquery::Status::failure("Endpoint not set");
-  } else {
-    VLOG(1) << "Sending Message '" << msg.name() << "' to  topic '" << topic
-            << "'";
-    d->ep->publish(topic, msg);
   }
 
   return osquery::Status::success();
