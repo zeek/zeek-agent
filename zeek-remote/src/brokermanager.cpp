@@ -83,18 +83,16 @@ BrokerManager::BrokerManager(const std::string& server_address,
 }
 
 BrokerManager::~BrokerManager() {
-  // Shutdown the endpoint
-  if (d->ep != nullptr) {
-    d->ep->shutdown();
-  }
+  d->ep->shutdown();
 }
 
 osquery::Status BrokerManager::reset(bool groups_only) {
   // Unsubscribe from all groups
   std::vector<std::string> cp_groups(d->groups);
+
   for (const auto& g : cp_groups) {
     auto s = removeGroup(g);
-    if (not s.ok()) {
+    if (!s.ok()) {
       return s;
     }
   }
@@ -106,9 +104,10 @@ osquery::Status BrokerManager::reset(bool groups_only) {
   // Remove all remaining message queues (manually added)
   std::map<std::string, std::shared_ptr<broker::subscriber>> cp_queues{
       d->subscribers};
+
   for (const auto& q : cp_queues) {
     auto s = deleteSubscriber(q.first);
-    if (not s.ok()) {
+    if (!s.ok()) {
       return s;
     }
   }
@@ -118,7 +117,7 @@ osquery::Status BrokerManager::reset(bool groups_only) {
 
 osquery::Status BrokerManager::addGroup(const std::string& group) {
   auto s = createSubscriber(BrokerTopics::PRE_GROUPS + group);
-  if (not s.ok()) {
+  if (!s.ok()) {
     return s;
   }
   d->groups.push_back(group);
