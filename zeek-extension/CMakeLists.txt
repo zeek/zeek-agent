@@ -34,6 +34,8 @@ function(zeekExtensionMain)
     # Uncomment this when moving to osquery 4.x
     # thirdparty_rapidjson
   )
+
+  add_subdirectory(tests)
 endfunction()
 
 zeekExtensionMain()

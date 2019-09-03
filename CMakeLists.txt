@@ -66,9 +66,22 @@ function(addZeekTest)
     ${ARGN}
   )
 
-  getTargetSourceFileList("${ARGS_TARGET}" additional_source_file_list)
+  list(FIND ARGS_KEYWORDS_MISSING_VALUES "TARGET" target_keyword_index)
+  if(NOT "${ARGS_TARGET}" STREQUAL "" OR NOT ${target_keyword_index} EQUAL -1)
+    getTargetSourceFileList("${ARGS_TARGET}" temp_additional_source_file_list)
 
-  set(ARGS_NAME "${ARGS_NAME}_test")
+    foreach(source_file ${temp_additional_source_file_list})
+      if("${source_file}" MATCHES "\/main.cpp$")
+        continue()
+      endif()
+
+      list(APPEND additional_source_file_list
+        "${source_file}"
+      )
+    endforeach()
+  endif()
+
+  set(ARGS_NAME "zeek_${ARGS_NAME}_test")
   add_executable("${ARGS_NAME}"
     ${ARGS_SOURCES}
     ${additional_source_file_list}

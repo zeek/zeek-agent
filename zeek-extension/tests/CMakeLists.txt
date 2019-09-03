@@ -8,15 +8,13 @@
 
 cmake_minimum_required(VERSION 3.10)
 
-function(zeekRemoteTests)
+function(zeekExtensionTests)
   set(library_list
-    thirdparty_caf
-    thirdparty_broker
+    zeek-remote
   )
 
   set(target_name_list
-    broker_manager
-    query_manager
+    configuration_checker
   )
 
   foreach(target_name ${target_name_list})
@@ -24,23 +22,19 @@ function(zeekRemoteTests)
       NAME
       "${target_name}"
 
-      TARGET
-        zeek-remote
-
       SOURCES
         "${target_name}.cpp"
+
+      TARGET
+        osquery-zeek
 
       LINK_LIBRARIES
         ${library_list}
 
-        # todo: Uncomment this when moving to osquery 4.x
-        # thirdparty_rapidjson
-
       INCLUDE_DIRECTORIES
-        "${CMAKE_CURRENT_SOURCE_DIR}/../include"
         "${CMAKE_CURRENT_SOURCE_DIR}/../src"
     )
   endforeach()
 endfunction()
 
-zeekRemoteTests()
+zeekExtensionTests()

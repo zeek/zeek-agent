@@ -10,8 +10,6 @@
 
 #include "configurationchecker.h"
 
-#include <iostream>
-
 #include <rapidjson/pointer.h>
 
 namespace zeek {
@@ -55,13 +53,15 @@ osquery::Status ConfigurationChecker::validateWithConstraints(
     const auto& member_name = p.first;
     const auto& member_constraint = p.second;
 
-    std::string member_path = member_constraint.path + "/" + member_name;
+    std::string member_path = "/" + member_constraint.path;
+    if (member_path.size() > 1U) {
+      member_path += "/" + member_name;
+    }
 
     rapidjson::Pointer member_pointer(member_path);
+    auto member_ptr = rapidjson::GetValueByPointer(document, member_pointer);
 
-    auto parent_object = rapidjson::GetValueByPointer(document, member_pointer);
-
-    if (parent_object == nullptr) {
+    if (member_ptr == nullptr) {
       if (member_constraint.required) {
         return osquery::Status::failure("Required field is missing: " +
                                         member_name);
@@ -70,8 +70,7 @@ osquery::Status ConfigurationChecker::validateWithConstraints(
       continue;
     }
 
-    const auto& member = document[member_name];
-    if (member.IsArray() != member_constraint.array) {
+    if (member_ptr->IsArray() != member_constraint.array) {
       return osquery::Status::failure("Required field array type mismatch: " +
                                       member_name);
     }
@@ -81,8 +80,8 @@ osquery::Status ConfigurationChecker::validateWithConstraints(
     switch (member_constraint.type) {
     case MemberConstraint::Type::String: {
       if (member_constraint.array) {
-        for (auto i = 0; i < member.Size(); ++i) {
-          if (!member[i].IsString()) {
+        for (auto i = 0; i < member_ptr->Size(); ++i) {
+          if (!(*member_ptr)[i].IsString()) {
             break;
           }
         }
@@ -90,7 +89,7 @@ osquery::Status ConfigurationChecker::validateWithConstraints(
         valid_type = true;
 
       } else {
-        valid_type = member.IsString();
+        valid_type = member_ptr->IsString();
       }
 
       break;
@@ -98,12 +97,12 @@ osquery::Status ConfigurationChecker::validateWithConstraints(
 
     case MemberConstraint::Type::UInt16: {
       if (member_constraint.array) {
-        for (auto i = 0; i < member.Size(); ++i) {
-          if (!member[i].IsNumber()) {
+        for (auto i = 0; i < member_ptr->Size(); ++i) {
+          if (!(*member_ptr)[i].IsInt()) {
             break;
           }
 
-          auto value = member.GetInt();
+          auto value = member_ptr->GetInt();
           if (value < 0 || value > std::numeric_limits<std::uint16_t>::max()) {
             break;
           }
@@ -112,11 +111,11 @@ osquery::Status ConfigurationChecker::validateWithConstraints(
         valid_type = true;
 
       } else {
-        if (!member.IsNumber()) {
+        if (!member_ptr->IsInt()) {
           break;
         }
 
-        auto value = member.GetInt();
+        auto value = member_ptr->GetInt();
         if (value < 0 || value > std::numeric_limits<std::uint16_t>::max()) {
           break;
         }
