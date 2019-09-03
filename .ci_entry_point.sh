@@ -7,6 +7,16 @@ main() {
   local zeek_extension_folder="${osquery_src_folder}/external/extension_osquery-zeek"
 
   executeCommand \
+    "Updating the system repositories" \
+    . \
+    sudo apt-get update
+
+  executeCommand \
+    "Installing system dependencies" \
+    . \
+    sudo apt-get install clang clang-tidy-8 cppcheck
+
+  executeCommand \
     "Fetching the osquery-zeek git submodules" \
     . \
     git submodule update --init --recursive
@@ -48,10 +58,22 @@ main() {
     make zeek_tests -j $(nproc)
 
   
-  printf "\nRunning the osquery-zeek tests...\n\n===\n\n"
-  ( cd "${osquery_src_folder}" && make run_zeek_tests )
+  printf "\nRunning the osquery-zeek tests and checks...\n\n===\n\n"
+  target_name_list=( run_zeek_tests zeek_tidy zeek_cppcheck )
 
-  return $?
+  local exit_code=0
+
+  for target_name in "${target_name_list[@]}" ; do
+    ( cd "${osquery_src_folder}" && make "${target_name}" )
+    if [[ $? -ne 0 ]] ; then
+      printf "Target ${target_name} has failed\n"
+      exit_code=1
+    fi
+
+    printf "\n\n"
+  done
+
+  return ${exit_code}
 }
 
 executeCommand() {
