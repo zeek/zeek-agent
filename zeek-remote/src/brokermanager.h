@@ -71,6 +71,9 @@ class BrokerManager final : public IBrokerManager {
    */
   void announce();
 
+  osquery::Status createSubscriber(const std::string& topic);
+  osquery::Status deleteSubscriber(const std::string& topic);
+
  protected:
   BrokerManager(const std::string& server_address,
                 std::uint16_t server_port,
@@ -85,8 +88,6 @@ class BrokerManager final : public IBrokerManager {
   virtual osquery::Status addGroup(const std::string& group) override;
   virtual osquery::Status removeGroup(const std::string& group) override;
   virtual std::vector<std::string> getGroups() override;
-  virtual osquery::Status createSubscriber(const std::string& topic) override;
-  virtual osquery::Status deleteSubscriber(const std::string& topic) override;
 
   virtual osquery::Status getSubscriber(BrokerSubscriberRef& subscriber_ref,
                                         const std::string& topic) override;
