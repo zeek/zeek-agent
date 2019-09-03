@@ -112,17 +112,6 @@ class IBrokerManager {
    */
   virtual osquery::Status checkConnection(long timeout = -1) = 0;
 
-  /**
-   * @brief Make the osquery host to announce itself to the remote broker
-   * endpoint.
-   *
-   * This broker message includes the hosts nodeID, groups and network
-   * interfaces
-   *
-   * @return
-   */
-  virtual osquery::Status announce() = 0;
-
   /// Get the file descriptor for peering to detection changes of connection
   /// osquery::Status
   virtual int getOutgoingConnectionFD() = 0;

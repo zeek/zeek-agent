@@ -60,6 +60,17 @@ class BrokerManager final : public IBrokerManager {
    */
   std::pair<broker::status, bool> getPeeringStatus(long timeout = 0);
 
+  /**
+   * @brief Make the osquery host to announce itself to the remote broker
+   * endpoint.
+   *
+   * This broker message includes the hosts nodeID, groups and network
+   * interfaces
+   *
+   * @return
+   */
+  void announce();
+
  protected:
   BrokerManager(const std::string& server_address,
                 std::uint16_t server_port,
@@ -82,7 +93,6 @@ class BrokerManager final : public IBrokerManager {
 
   virtual std::vector<std::string> getTopics() override;
   virtual osquery::Status checkConnection(long timeout = -1) override;
-  virtual osquery::Status announce() override;
   virtual int getOutgoingConnectionFD() override;
 
   virtual osquery::Status logQueryLogItemToZeek(

@@ -250,13 +250,8 @@ osquery::Status BrokerManager::checkConnection(long timeout) {
   // Became successfully connected!
   VLOG(1) << "Broker connection established";
 
-  s = announce();
-  if (!s.ok()) {
-    LOG(ERROR) << s.getMessage();
-    return s;
-  }
-
-  return s;
+  announce();
+  return osquery::Status::success();
 }
 
 osquery::Status BrokerManager::initiateReset(bool reset_schedule) {
@@ -338,7 +333,7 @@ std::pair<broker::status, bool> BrokerManager::getPeeringStatus(long timeout) {
   return {d->connection_status, has_changed};
 }
 
-osquery::Status BrokerManager::announce() {
+void BrokerManager::announce() {
   // Announce this endpoint to be an osquery-zeek extension
   broker::vector group_list;
   for (const auto& g : getGroups()) {
@@ -358,7 +353,6 @@ osquery::Status BrokerManager::announce() {
   // clang-format on
 
   d->ep->publish(BrokerTopics::ANNOUNCE, announceMsg);
-  return osquery::Status::success();
 }
 
 int BrokerManager::getOutgoingConnectionFD() {
