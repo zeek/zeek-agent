@@ -85,21 +85,25 @@ TEST(ConfigurationChecker, validateWithConstraints) {
   document.Parse("[]");
   auto status = ConfigurationChecker::validateWithConstraints(
       kSimpleConstraintSet, document);
+
   ASSERT_FALSE(status.ok()) << status.getMessage();
 
   document.Parse("...");
   status = ConfigurationChecker::validateWithConstraints(kSimpleConstraintSet,
                                                          document);
+
   ASSERT_FALSE(status.ok()) << status.getMessage();
 
   document.Parse("{}");
   status = ConfigurationChecker::validateWithConstraints(kSimpleConstraintSet,
                                                          document);
+
   ASSERT_FALSE(status.ok()) << status.getMessage();
 
   document.Parse("{}");
   status = ConfigurationChecker::validateWithConstraints(kOptionalConstraintSet,
                                                          document);
+
   ASSERT_TRUE(status.ok()) << status.getMessage();
 
   const std::string kSimpleJson = R""(
@@ -117,10 +121,12 @@ TEST(ConfigurationChecker, validateWithConstraints) {
   document.Parse(kSimpleJson);
   status = ConfigurationChecker::validateWithConstraints(kSimpleConstraintSet,
                                                          document);
+
   ASSERT_TRUE(status.ok()) << status.getMessage();
 
   status = ConfigurationChecker::validateWithConstraints(kArrayConstraintSet,
                                                          document);
+
   ASSERT_FALSE(status.ok()) << status.getMessage();
 
   const std::string kArrayJson = R""(
@@ -146,10 +152,30 @@ TEST(ConfigurationChecker, validateWithConstraints) {
   document.Parse(kArrayJson);
   status = ConfigurationChecker::validateWithConstraints(kArrayConstraintSet,
                                                          document);
+
   ASSERT_TRUE(status.ok()) << status.getMessage();
 
   status = ConfigurationChecker::validateWithConstraints(kSimpleConstraintSet,
                                                          document);
+
+  ASSERT_FALSE(status.ok()) << status.getMessage();
+
+  const std::string kInvalidIntegerJson = R""(
+    {
+      "container01": {
+        "string": "hello!"
+      },
+
+      "container02": {
+        "number": 80000
+      }
+    }
+  )"";
+
+  document.Parse(kInvalidIntegerJson);
+  status = ConfigurationChecker::validateWithConstraints(kSimpleConstraintSet,
+                                                         document);
+
   ASSERT_FALSE(status.ok()) << status.getMessage();
 }
 
