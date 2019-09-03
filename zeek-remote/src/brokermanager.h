@@ -42,9 +42,6 @@ class BrokerManager final : public IBrokerManager {
   struct PrivateData;
   std::unique_ptr<PrivateData> d;
 
-  /// Set a node ID if not already exists
-  osquery::Status setNodeID(const std::string& uid);
-
   /// Initiates the peering to remote endpoint
   osquery::Status initiatePeering();
 

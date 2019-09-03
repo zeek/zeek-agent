@@ -80,10 +80,7 @@ BrokerManager::BrokerManager(const std::string& server_address,
   d->query_manager = query_manager;
 
   // Set Broker UID
-  auto ident = osquery::getHostIdentifier();
-  setNodeID(ident);
-
-  const auto& uid = getNodeID();
+  d->nodeID = osquery::getHostIdentifier();
 
   // Read remote endpoint from config
   d->remote_endpoint =
@@ -124,17 +121,6 @@ osquery::Status BrokerManager::reset(bool groups_only) {
     }
   }
 
-  return osquery::Status::success();
-}
-
-osquery::Status BrokerManager::setNodeID(const std::string& uid) {
-  if (!d->nodeID.empty()) {
-    return osquery::Status::failure("Node ID already set to '" + d->nodeID +
-                                    "' (new: '" + uid + "')");
-  }
-
-  // Save new node ID
-  d->nodeID = uid;
   return osquery::Status::success();
 }
 
