@@ -61,8 +61,8 @@ struct BrokerManager::PrivateData final {
   // The Broker Endpoint
   std::unique_ptr<broker::endpoint> ep{nullptr};
 
-  //  Key: topic_Name, Value: subscriber
-  std::map<std::string, std::shared_ptr<broker::subscriber>> subscribers;
+  // Key: topic_Name, Value: subscriber
+  std::map<std::string, BrokerSubscriberRef> subscribers;
 
   // Initialized from the configuration file
   std::vector<std::string> startup_groups;
@@ -102,8 +102,7 @@ osquery::Status BrokerManager::reset(bool groups_only) {
   }
 
   // Remove all remaining message queues (manually added)
-  std::map<std::string, std::shared_ptr<broker::subscriber>> cp_queues{
-      d->subscribers};
+  std::map<std::string, BrokerSubscriberRef> cp_queues{d->subscribers};
 
   for (const auto& q : cp_queues) {
     auto s = deleteSubscriber(q.first);
@@ -120,21 +119,20 @@ osquery::Status BrokerManager::addGroup(const std::string& group) {
   if (!s.ok()) {
     return s;
   }
+
   d->groups.push_back(group);
   return osquery::Status::success();
 }
 
 osquery::Status BrokerManager::removeGroup(const std::string& group) {
-  auto element_pos = std::find(d->groups.begin(), d->groups.end(), group);
-  // Group exists?
-  if (element_pos == d->groups.end()) {
+  auto it = std::find(d->groups.begin(), d->groups.end(), group);
+  if (it == d->groups.end()) {
     return osquery::Status::failure("Group '" + group + "' does not exist");
   }
 
-  // Delete Group
-  d->groups.erase(element_pos);
+  // Delete the group and the message queue (if empty)
+  d->groups.erase(it);
 
-  // Delete message queue (maybe)
   if (std::find(d->groups.begin(), d->groups.end(), group) != d->groups.end()) {
     return osquery::Status(
         0, "More subscriptions for group '" + group + "' exist");
@@ -148,16 +146,13 @@ std::vector<std::string> BrokerManager::getGroups() {
 }
 
 osquery::Status BrokerManager::createSubscriber(const std::string& topic) {
-  if (d->ep == nullptr) {
-    return osquery::Status::failure("Broker Endpoint does not exist");
-  }
-
   if (d->subscribers.count(topic) != 0) {
     return osquery::Status::failure("Message queue exists for topic '" + topic +
                                     "'");
   }
 
   VLOG(1) << "Creating message queue: " << topic;
+
   d->subscribers[topic] =
       std::make_shared<broker::subscriber>(d->ep->make_subscriber({topic}));
 
@@ -165,21 +160,31 @@ osquery::Status BrokerManager::createSubscriber(const std::string& topic) {
 }
 
 osquery::Status BrokerManager::deleteSubscriber(const std::string& topic) {
-  if (d->subscribers.count(topic) == 0) {
+  auto subscriber_it = d->subscribers.find(topic);
+  if (subscriber_it == d->subscribers.end()) {
     return osquery::Status::failure("Message queue does not exist for topic '" +
                                     topic + "'");
   }
 
-  // shared_ptr should delete the message_queue and unsubscribe from topic
-  auto subscriber = d->subscribers.find(topic);
-  subscriber->second->remove_topic(topic);
-  d->subscribers.erase(subscriber);
+  auto subscriber_ref = subscriber_it->second;
+  d->subscribers.erase(subscriber_it);
+
+  subscriber_ref->remove_topic(topic);
   return osquery::Status::success();
 }
 
-std::shared_ptr<broker::subscriber> BrokerManager::getSubscriber(
-    const std::string& topic) {
-  return d->subscribers.at(topic);
+osquery::Status BrokerManager::getSubscriber(BrokerSubscriberRef& ref,
+                                             const std::string& topic) {
+  ref.reset();
+
+  auto subscriber_it = d->subscribers.find(topic);
+  if (subscriber_it == d->subscribers.end()) {
+    return osquery::Status::failure(
+        "No subscriber found for the specified topic");
+  }
+
+  ref = subscriber_it->second;
+  return osquery::Status::success();
 }
 
 std::vector<std::string> BrokerManager::getTopics() {

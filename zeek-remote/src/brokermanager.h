@@ -77,8 +77,8 @@ class BrokerManager final : public IBrokerManager {
   virtual osquery::Status createSubscriber(const std::string& topic) override;
   virtual osquery::Status deleteSubscriber(const std::string& topic) override;
 
-  virtual std::shared_ptr<broker::subscriber> getSubscriber(
-      const std::string& topic) override;
+  virtual osquery::Status getSubscriber(BrokerSubscriberRef& subscriber_ref,
+                                        const std::string& topic) override;
 
   virtual std::vector<std::string> getTopics() override;
   virtual osquery::Status checkConnection(long timeout = -1) override;

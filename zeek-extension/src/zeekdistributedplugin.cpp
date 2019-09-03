@@ -178,9 +178,15 @@ osquery::Status ZeekDistributedPlugin::getQueries(std::string& json) {
 
   // Retrieve info about each subscriber and the file descriptor
   std::unique_ptr<pollfd[]> fds(new pollfd[topics.size() + 1]);
+
   for (unsigned long i = 0; i < topics.size(); i++) {
-    fds[i] = pollfd{
-        broker_manager->getSubscriber(topics.at(i))->fd(), POLLIN | POLLERR, 0};
+    BrokerSubscriberRef subscriber_ref = {};
+    s = broker_manager->getSubscriber(subscriber_ref, topics.at(i));
+    if (!s.ok()) {
+      continue;
+    }
+
+    fds[i] = pollfd{subscriber_ref->fd(), POLLIN | POLLERR, 0};
   }
 
   // Append the connection status file descriptor to detect connection failures
@@ -210,11 +216,15 @@ osquery::Status ZeekDistributedPlugin::getQueries(std::string& json) {
       continue;
     }
 
-    std::shared_ptr<broker::subscriber> sub =
-        broker_manager->getSubscriber(topic);
+    BrokerSubscriberRef subscriber_ref = {};
+    s = broker_manager->getSubscriber(subscriber_ref, topic);
+    if (!s.ok()) {
+      LOG(WARNING) << s.getMessage();
+      continue;
+    }
 
     // Process each message on this socket
-    for (const auto& msg : sub->poll()) {
+    for (const auto& msg : subscriber_ref->poll()) {
       // Directly updates the daemon schedule if requested
       // Returns one time queries otherwise
       assert(topic == msg.first);

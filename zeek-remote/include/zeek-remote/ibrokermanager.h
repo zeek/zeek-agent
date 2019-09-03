@@ -25,6 +25,8 @@
 #include <zeek-remote/types.h>
 
 namespace zeek {
+using BrokerSubscriberRef = std::shared_ptr<broker::subscriber>;
+
 /**
  * @brief Manager class for connections of the broker communication library.
  *
@@ -93,8 +95,8 @@ class IBrokerManager {
   virtual osquery::Status deleteSubscriber(const std::string& topic) = 0;
 
   /// Get the message_queue (i.e. subscription message inbox) of the topic
-  virtual std::shared_ptr<broker::subscriber> getSubscriber(
-      const std::string& topic) = 0;
+  virtual osquery::Status getSubscriber(BrokerSubscriberRef& ref,
+                                        const std::string& topic) = 0;
 
   /// Get all subscribed topics
   virtual std::vector<std::string> getTopics() = 0;
