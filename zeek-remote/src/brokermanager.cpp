@@ -113,10 +113,6 @@ osquery::Status BrokerManager::removeGroup(const std::string& group) {
   return deleteSubscriber(BrokerTopics::PRE_GROUPS + group);
 }
 
-std::vector<std::string> BrokerManager::getGroups() {
-  return d->groups;
-}
-
 osquery::Status BrokerManager::getSubscriber(BrokerSubscriberRef& ref,
                                              const std::string& topic) {
   ref.reset();
@@ -282,7 +278,7 @@ std::pair<broker::status, bool> BrokerManager::getPeeringStatus(long timeout) {
 void BrokerManager::announce() {
   // Announce this endpoint to be an osquery-zeek extension
   broker::vector group_list;
-  for (const auto& g : getGroups()) {
+  for (const auto& g : d->groups) {
     group_list.push_back(broker::data(g));
   }
 

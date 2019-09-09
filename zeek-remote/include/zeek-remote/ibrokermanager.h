@@ -73,9 +73,6 @@ class IBrokerManager {
    */
   virtual osquery::Status removeGroup(const std::string& group) = 0;
 
-  /// Get the groups that the osquery host has joined
-  virtual std::vector<std::string> getGroups() = 0;
-
   /// Get the message_queue (i.e. subscription message inbox) of the topic
   virtual osquery::Status getSubscriber(BrokerSubscriberRef& ref,
                                         const std::string& topic) = 0;

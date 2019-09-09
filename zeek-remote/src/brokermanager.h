@@ -96,7 +96,6 @@ class BrokerManager final : public IBrokerManager {
   // IBrokerManager interface
   virtual osquery::Status addGroup(const std::string& group) override;
   virtual osquery::Status removeGroup(const std::string& group) override;
-  virtual std::vector<std::string> getGroups() override;
 
   virtual osquery::Status getSubscriber(BrokerSubscriberRef& subscriber_ref,
                                         const std::string& topic) override;
