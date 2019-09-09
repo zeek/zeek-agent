@@ -230,11 +230,7 @@ osquery::Status ZeekDistributedPlugin::getQueries(std::string& json) {
       assert(topic == msg.first);
 
       broker::bro::Event event(msg.second);
-      VLOG(1) << "Processing received event: "
-              << broker::to_string(event.as_data());
-
       s = processMessage(event, topic, oT_queries);
-
       if (!s.ok()) {
         LOG(ERROR) << s.getMessage();
         continue;

@@ -15,16 +15,6 @@
 #include <zeek-remote/iquerymanager.h>
 
 namespace zeek {
-class OsqueryDatabaseInterface final : public IDatabaseInterface {
- public:
-  virtual ~OsqueryDatabaseInterface() = default;
-
-  virtual osquery::Status deleteKey(const std::string& domain,
-                                    const std::string& key) const override {
-    osquery::deleteDatabaseValue(domain, key);
-  }
-};
-
 /**
  * @brief Manager class for queries that are received via broker.
  *

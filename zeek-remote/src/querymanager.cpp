@@ -22,6 +22,18 @@
 #include <zeek-remote/utils.h>
 
 namespace zeek {
+namespace {
+class OsqueryDatabaseInterface final : public IDatabaseInterface {
+ public:
+  virtual ~OsqueryDatabaseInterface() = default;
+
+  virtual osquery::Status deleteKey(const std::string& domain,
+                                    const std::string& key) const override {
+    osquery::deleteDatabaseValue(domain, key);
+  }
+};
+} // namespace
+
 struct QueryManager::PrivateData final {
   // Holds instance data
   Context context;
@@ -319,6 +331,7 @@ osquery::Status IQueryManager::create(Ref& ref) {
 
     std::shared_ptr<IDatabaseInterface> database_interface(
         new OsqueryDatabaseInterface);
+
     auto ptr = new QueryManager(database_interface);
 
     ref.reset(ptr);
