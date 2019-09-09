@@ -86,34 +86,6 @@ BrokerManager::~BrokerManager() {
   d->ep->shutdown();
 }
 
-osquery::Status BrokerManager::reset(bool groups_only) {
-  // Unsubscribe from all groups
-  std::vector<std::string> cp_groups(d->groups);
-
-  for (const auto& g : cp_groups) {
-    auto s = removeGroup(g);
-    if (!s.ok()) {
-      return s;
-    }
-  }
-
-  if (groups_only) {
-    return osquery::Status::success();
-  }
-
-  // Remove all remaining message queues (manually added)
-  std::map<std::string, BrokerSubscriberRef> cp_queues{d->subscribers};
-
-  for (const auto& q : cp_queues) {
-    auto s = deleteSubscriber(q.first);
-    if (!s.ok()) {
-      return s;
-    }
-  }
-
-  return osquery::Status::success();
-}
-
 osquery::Status BrokerManager::addGroup(const std::string& group) {
   auto s = createSubscriber(BrokerTopics::PRE_GROUPS + group);
   if (!s.ok()) {
@@ -233,7 +205,7 @@ osquery::Status BrokerManager::initiateReset(bool reset_schedule) {
     d->query_manager->updateSchedule();
   }
 
-  reset(false);
+  reset();
 
   // Subscribe to all
   auto s = createSubscriber(BrokerTopics::ALL);
@@ -287,6 +259,7 @@ std::pair<broker::status, bool> BrokerManager::getPeeringStatus(long timeout) {
   if (auto err = broker::get_if<broker::error>(s)) {
     LOG(WARNING) << "Broker error:" << static_cast<int>(err->code()) << ", "
                  << to_string(*err);
+
     d->connection_status = {};
     has_changed = true;
   }
@@ -294,6 +267,7 @@ std::pair<broker::status, bool> BrokerManager::getPeeringStatus(long timeout) {
   if (auto st = broker::get_if<broker::status>(s)) {
     VLOG(1) << "Broker status:" << static_cast<int>(st->code()) << ", "
             << to_string(*st);
+
     d->connection_status = *st;
     has_changed = true;
   }
@@ -327,13 +301,35 @@ void BrokerManager::announce() {
   d->ep->publish(BrokerTopics::ANNOUNCE, announceMsg);
 }
 
+osquery::Status BrokerManager::reset() {
+  // Unsubscribe from all groups
+  std::vector<std::string> cp_groups(d->groups);
+
+  for (const auto& g : cp_groups) {
+    auto s = removeGroup(g);
+    if (!s.ok()) {
+      return s;
+    }
+  }
+
+  // Remove all remaining message queues (manually added)
+  std::map<std::string, BrokerSubscriberRef> cp_queues{d->subscribers};
+
+  for (const auto& q : cp_queues) {
+    auto s = deleteSubscriber(q.first);
+    if (!s.ok()) {
+      return s;
+    }
+  }
+
+  return osquery::Status::success();
+}
+
 osquery::Status BrokerManager::createSubscriber(const std::string& topic) {
   if (d->subscribers.count(topic) != 0) {
     return osquery::Status::failure("Message queue exists for topic '" + topic +
                                     "'");
   }
-
-  VLOG(1) << "Creating message queue: " << topic;
 
   d->subscribers[topic] =
       std::make_shared<broker::subscriber>(d->ep->make_subscriber({topic}));
@@ -356,9 +352,10 @@ osquery::Status BrokerManager::deleteSubscriber(const std::string& topic) {
 }
 
 int BrokerManager::getOutgoingConnectionFD() {
-  if (d->ep == nullptr) {
+  if (d->ss == nullptr) {
     return -1;
   }
+
   return d->ss->fd();
 }
 
@@ -367,8 +364,8 @@ osquery::Status BrokerManager::logQueryLogItemToZeek(
   const auto& queryID = qli.name;
 
   // Is this schedule or one-time? Get Query and Type
-  std::string query = "";
-  std::string qType = "";
+  std::string query;
+  std::string qType;
   auto status_find = d->query_manager->findQueryAndType(queryID, qType, query);
   if (!status_find.ok()) {
     // Might have been unsubscribed from during query execution
@@ -383,9 +380,11 @@ osquery::Status BrokerManager::logQueryLogItemToZeek(
   for (const auto& row : qli.results.added) {
     rows.emplace_back(row, "ADD");
   }
+
   for (const auto& row : qli.results.removed) {
     rows.emplace_back(row, "REMOVE");
   }
+
   for (const auto& row : qli.snapshot_results) {
     rows.emplace_back(row, "SNAPSHOT");
   }
@@ -403,12 +402,14 @@ osquery::Status BrokerManager::logQueryLogItemToZeek(
   for (const auto& t : columns) {
     const auto& columnName = std::get<0>(t);
     const auto& columnType = std::get<1>(t);
+
     columnTypes[columnName] = columnType;
   }
 
   // Common message fields
   const auto& topic = d->query_manager->getEventTopic(queryID);
   const auto& event_name = d->query_manager->getEventName(queryID);
+
   VLOG(1) << "Creating " << rows.size() << " messages with event name '"
           << event_name << " (ID " << queryID << ")";
 
@@ -419,12 +420,17 @@ osquery::Status BrokerManager::logQueryLogItemToZeek(
     const auto& trigger = std::get<1>(element);
 
     // Create message data header
-    broker::vector msg_data;
+    // clang-format off
     broker::vector result_info(
-        {broker::data(d->nodeID),
-         broker::data(broker::data(broker::enum_value{"osquery::" + trigger})),
-         broker::data(d->query_manager->getEventCookie(queryID))});
-    msg_data.push_back(broker::data(result_info));
+      {
+        broker::data(d->nodeID),
+        broker::data(broker::data(broker::enum_value{"osquery::" + trigger})),
+        broker::data(d->query_manager->getEventCookie(queryID))
+      }
+    );
+    // clang-format on
+
+    broker::vector msg_data = {broker::data(result_info)};
 
     // Format each column
     for (const auto& t : columns) {

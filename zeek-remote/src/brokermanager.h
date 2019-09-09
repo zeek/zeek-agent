@@ -71,6 +71,16 @@ class BrokerManager final : public IBrokerManager {
    */
   void announce();
 
+  /**
+   * @brief Reset the BrokerManager to its initial state.
+   *
+   * This makes the BrokerManager to remove all groups and therefore unsubscribe
+   * from all respective broker topics.
+   *
+   * @return
+   */
+  osquery::Status reset();
+
   osquery::Status createSubscriber(const std::string& topic);
   osquery::Status deleteSubscriber(const std::string& topic);
 
@@ -84,7 +94,6 @@ class BrokerManager final : public IBrokerManager {
   virtual ~BrokerManager() override;
 
   // IBrokerManager interface
-  virtual osquery::Status reset(bool groups_only = true) override;
   virtual osquery::Status addGroup(const std::string& group) override;
   virtual osquery::Status removeGroup(const std::string& group) override;
   virtual std::vector<std::string> getGroups() override;

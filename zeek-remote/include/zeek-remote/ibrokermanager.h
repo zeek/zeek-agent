@@ -52,18 +52,6 @@ class IBrokerManager {
   virtual ~IBrokerManager() = default;
 
   /**
-   * @brief Reset the BrokerManager to its initial state.
-   *
-   * This makes the BrokerManager to remove all groups and therefore unsubscribe
-   * from all respective broker topics.
-   *
-   * @param groups_only Should one unsubscribe from groups only or additionally
-   * also from predefined topics
-   * @return
-   */
-  virtual osquery::Status reset(bool groups_only = true) = 0;
-
-  /**
    * @brief Make the osquery host to join a group.
    *
    * Joining a group results in subscribing to the broker topic identified by
