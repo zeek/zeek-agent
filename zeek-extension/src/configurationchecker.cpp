@@ -55,8 +55,10 @@ osquery::Status ConfigurationChecker::validateWithConstraints(
 
     std::string member_path = "/" + member_constraint.path;
     if (member_path.size() > 1U) {
-      member_path += "/" + member_name;
+      member_path += "/";
     }
+
+    member_path += member_name;
 
     rapidjson::Pointer member_pointer(member_path);
     auto member_ptr = rapidjson::GetValueByPointer(document, member_pointer);

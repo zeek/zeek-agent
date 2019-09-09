@@ -80,6 +80,32 @@ TEST(ConfigurationChecker, validateWithConstraints) {
   };
   // clang-format on
 
+  // clang-format off
+  const ConfigurationChecker::Constraints kRootItemsConstraintSet = {
+    {
+      "test_item1",
+
+      {
+        ConfigurationChecker::MemberConstraint::Type::String,
+        false,
+        "",
+        true
+      }
+    },
+
+    {
+      "test_item2",
+
+      {
+        ConfigurationChecker::MemberConstraint::Type::UInt16,
+        false,
+        "",
+        true
+      }
+    },
+  };
+  // clang-format on
+
   rapidjson::Document document;
 
   document.Parse("[]");
@@ -177,6 +203,19 @@ TEST(ConfigurationChecker, validateWithConstraints) {
                                                          document);
 
   ASSERT_FALSE(status.ok()) << status.getMessage();
+
+  const std::string kRootItemsJson = R""(
+    {
+      "test_item1": "hello",
+      "test_item2": 12345
+    }
+  )"";
+
+  document.Parse(kRootItemsJson);
+  status = ConfigurationChecker::validateWithConstraints(
+      kRootItemsConstraintSet, document);
+
+  ASSERT_TRUE(status.ok()) << status.getMessage();
 }
 
 } // namespace zeek

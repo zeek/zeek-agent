@@ -108,15 +108,16 @@ osquery::Status ZeekConfiguration::parseConfigurationData(
     ConfigurationData& config, const std::string& json) {
   config = {};
 
+  rapidjson::Document document;
+  document.Parse(json);
+
   ConfigurationChecker::Ref config_checker;
   auto status =
       ConfigurationChecker::create(config_checker, kConfigurationConstraints);
+
   if (!status.ok()) {
     return status;
   }
-
-  rapidjson::Document document;
-  document.Parse(json);
 
   status = config_checker->validate(document);
   if (!status.ok()) {
