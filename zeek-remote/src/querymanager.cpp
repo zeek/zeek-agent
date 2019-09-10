@@ -29,7 +29,7 @@ class OsqueryDatabaseInterface final : public IDatabaseInterface {
 
   virtual osquery::Status deleteKey(const std::string& domain,
                                     const std::string& key) const override {
-    osquery::deleteDatabaseValue(domain, key);
+    return osquery::deleteDatabaseValue(domain, key);
   }
 };
 } // namespace
@@ -189,7 +189,7 @@ void QueryManager::purgeScheduledQueryFromDatabase(
     auto status = database_interface->deleteKey(osquery::kQueries, key_name);
     if (!status.ok()) {
       VLOG(1) << "Failed to erase the following database key: " << key_name
-              << " (" << status.getMessage() << ")";
+              << " inside the namespace " << osquery::kQueries;
     }
   }
 }
