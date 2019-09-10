@@ -183,19 +183,42 @@ osquery::Status ZeekConfiguration::parseConfigurationData(
 
   if (document.HasMember("authentication")) {
     const auto& auth_object = document["authentication"];
+    std::vector<std::string> auth_file_list;
 
     if (auth_object.HasMember("certificate_authority")) {
       context.certificate_authority =
           auth_object["certificate_authority"].GetString();
+
+      auth_file_list.push_back(context.certificate_authority);
     }
 
     if (auth_object.HasMember("client_certificate")) {
       context.client_certificate =
           auth_object["client_certificate"].GetString();
+
+      auth_file_list.push_back(context.client_certificate);
     }
 
     if (auth_object.HasMember("client_key")) {
       context.client_key = auth_object["client_key"].GetString();
+
+      auth_file_list.push_back(context.client_key);
+    }
+
+    for (const auto& path : auth_file_list) {
+      bool valid_path = false;
+
+      {
+        std::ifstream s(path);
+        valid_path = s.good();
+      }
+
+      if (!valid_path) {
+        return osquery::Status(
+            2,
+            "The following path is either not valid or not accessible: " +
+                path);
+      }
     }
   }
 
@@ -216,8 +239,13 @@ ZeekConfiguration::ZeekConfiguration(const std::string& path)
       use_default_settings = false;
 
     } else {
-      LOG(ERROR) << "Failed to parse the configuration file: "
-                 << status.getMessage();
+      if (status.getCode() == 1) {
+        LOG(WARNING) << "Configuration file error: " << status.getMessage()
+                     << ". Continuing anyway...";
+
+      } else {
+        throw status;
+      }
     }
   }
 

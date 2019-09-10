@@ -89,6 +89,7 @@ BrokerManager::BrokerManager(const BrokerManager::Configuration& config,
       broker_conf.set("openssl.cafile", d->config.certificate_authority);
       broker_conf.set("openssl.certificate", d->config.client_certificate);
       broker_conf.set("openssl.key", d->config.client_key);
+
     } else {
       LOG(WARNING) << "Certificate authentication is NOT enabled!";
     }
