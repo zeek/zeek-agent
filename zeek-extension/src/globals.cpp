@@ -18,29 +18,30 @@ namespace {
 const std::string kConfigurationPath{"/etc/osquery/zeek.conf"};
 
 bool initializeGlobalsHelper() {
-  auto status =
-      zeek::ZeekConfiguration::create(zeek::configuration, kConfigurationPath);
+  auto status = ZeekConfiguration::create(configuration, kConfigurationPath);
 
   if (!status) {
     LOG(ERROR) << status.getMessage();
     return false;
   }
 
-  status = zeek::IQueryManager::create(zeek::query_manager);
+  status = IQueryManager::create(query_manager);
   if (!status) {
     LOG(ERROR) << status.getMessage();
     return false;
   }
 
-  auto server_address = zeek::configuration->serverAddress();
-  auto server_port = zeek::configuration->serverPort();
-  auto server_group_list = zeek::configuration->groupList();
+  IBrokerManager::Configuration broker_config;
+  broker_config.server_address = configuration->serverAddress();
+  broker_config.server_port = configuration->serverPort();
+  broker_config.server_group_list = configuration->groupList();
 
-  status = zeek::IBrokerManager::create(zeek::broker_manager,
-                                        server_address,
-                                        server_port,
-                                        server_group_list,
-                                        zeek::query_manager);
+  broker_config.certificate_authority = configuration->certificateAuthority();
+  broker_config.client_certificate = configuration->clientCertificate();
+  broker_config.client_key = configuration->clientKey();
+
+  status = IBrokerManager::create(broker_manager, broker_config, query_manager);
+
   if (!status) {
     LOG(ERROR) << status.getMessage();
     return false;

@@ -75,7 +75,7 @@ This file should contain the full path to the `osquery-zeek.ext` binary.
 ```
 
 ## /etc/osquery/zeek.conf
-```
+``` json
 {
   "host": "localhost",
   "port": "9999",
@@ -83,9 +83,17 @@ This file should contain the full path to the `osquery-zeek.ext` binary.
   "group_list": {
     "group1": "geo/de/hamburg",
     "group2": "orga/uhh/cs/iss"
+  },
+
+  "authentication": {
+    "certificate_authority": "/path/to/certs.pem",
+    "client_certificate": "/path/to/client.crt",
+    "client_key": "/path/to/client.key"
   }
 }
 ```
+
+The `authentication` object is optional, but strongly recommended for production environments.
 
 # Launching osquery
 Depending on how osquery was installed, you may have to launch it manually or with systemd. The above options, save for the zeek.conf configuration file, can also be passed directly to osquery as command line flags. The extensions.load file can be replaced with the `--extension=/path/to/ext` parameter.

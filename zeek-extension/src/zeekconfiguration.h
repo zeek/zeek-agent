@@ -28,13 +28,20 @@ class ZeekConfiguration final {
   std::uint16_t serverPort() const;
   const std::vector<std::string>& groupList() const;
 
-  struct ConfigurationData final {
+  const std::string& certificateAuthority() const;
+  const std::string& clientCertificate() const;
+  const std::string& clientKey() const;
+
+  struct Context final {
     std::string server_address;
     std::uint16_t server_port;
     std::vector<std::string> group_list;
+    std::string certificate_authority;
+    std::string client_certificate;
+    std::string client_key;
   };
 
-  static osquery::Status parseConfigurationData(ConfigurationData& config,
+  static osquery::Status parseConfigurationData(Context& context,
                                                 const std::string& json);
 
   ZeekConfiguration(const ZeekConfiguration&) = delete;

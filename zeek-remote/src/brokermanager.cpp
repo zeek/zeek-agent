@@ -34,17 +34,14 @@
 
 namespace zeek {
 struct BrokerManager::PrivateData final {
+  // Configuration (startup groups, server port and address, etc)
+  Configuration config;
+
   // A pointer to a shared query manager instance
   IQueryManager::Ref query_manager;
 
   // Mutex to synchronize threads that check connection state
   mutable osquery::Mutex connection_mutex;
-
-  // The Zeek server address
-  std::string server_address;
-
-  // The Zeek server port
-  std::uint16_t server_port{9999U};
 
   // The status_subscriber of the endpoint
   std::unique_ptr<broker::status_subscriber> ss{nullptr};
@@ -63,23 +60,41 @@ struct BrokerManager::PrivateData final {
 
   // Key: topic_Name, Value: subscriber
   std::map<std::string, BrokerSubscriberRef> subscribers;
-
-  // Initialized from the configuration file
-  std::vector<std::string> startup_groups;
 };
 
-BrokerManager::BrokerManager(const std::string& server_address,
-                             std::uint16_t server_port,
-                             const std::vector<std::string>& server_group_list,
+BrokerManager::BrokerManager(const BrokerManager::Configuration& config,
                              IQueryManager::Ref query_manager)
     : d(new PrivateData) {
-  d->startup_groups = server_group_list;
+  d->config = config;
   d->query_manager = query_manager;
-  d->server_address = server_address;
-  d->server_port = server_port;
 
   d->nodeID = osquery::getHostIdentifier();
-  d->ep = std::make_unique<broker::endpoint>();
+
+  if (d->config.client_certificate.empty() != d->config.client_key.empty()) {
+    throw osquery::Status::failure(
+        "The certificate and the key settings should be either both empty or "
+        "both valid");
+  }
+
+  if (d->config.client_certificate.empty() &&
+      !d->config.certificate_authority.empty()) {
+    throw osquery::Status::failure(
+        "The CA file path should be removed when no authentication is "
+        "configured");
+  }
+
+  {
+    broker::configuration broker_conf;
+    if (!d->config.client_certificate.empty()) {
+      broker_conf.set("openssl.cafile", d->config.certificate_authority);
+      broker_conf.set("openssl.certificate", d->config.client_certificate);
+      broker_conf.set("openssl.key", d->config.client_key);
+    } else {
+      LOG(WARNING) << "Certificate authentication is NOT enabled!";
+    }
+
+    d->ep = std::make_unique<broker::endpoint>(std::move(broker_conf));
+  }
 }
 
 BrokerManager::~BrokerManager() {
@@ -149,14 +164,15 @@ osquery::Status BrokerManager::checkConnection(long timeout) {
       LOG(WARNING) << s.getMessage();
     }
 
-    LOG(INFO) << "Connecting to Zeek " << d->server_address << ":"
-              << d->server_port;
+    LOG(INFO) << "Connecting to Zeek " << d->config.server_address << ":"
+              << d->config.server_port;
 
     d->ss = std::make_unique<broker::status_subscriber>(
         d->ep->make_status_subscriber(true));
 
-    d->ep->peer_nosync(
-        d->server_address, d->server_port, broker::timeout::seconds(3));
+    d->ep->peer_nosync(d->config.server_address,
+                       d->config.server_port,
+                       broker::timeout::seconds(3));
   }
 
   // Was connected last time we checked?
@@ -216,7 +232,7 @@ osquery::Status BrokerManager::initiateReset(bool reset_schedule) {
   }
 
   // Set Startup groups and subscribe to group topics
-  for (const auto& g : d->startup_groups) {
+  for (const auto& g : d->config.server_group_list) {
     s = addGroup(g);
     if (!s.ok()) {
       return s;
@@ -387,6 +403,7 @@ osquery::Status BrokerManager::logQueryLogItemToZeek(
 
   // Get Info about SQL Query and Types
   osquery::TableColumns columns;
+
   auto status = getQueryColumns(query, columns);
   if (!status.ok()) {
     LOG(ERROR) << status.getMessage();
@@ -524,16 +541,12 @@ osquery::Status BrokerManager::logQueryLogItemToZeek(
 
 osquery::Status IBrokerManager::create(
     Ref& ref,
-    const std::string& server_address,
-    std::uint16_t server_port,
-    const std::vector<std::string>& server_group_list,
+    const IBrokerManager::Configuration& config,
     IQueryManager::Ref query_manager) {
   try {
     ref.reset();
 
-    auto ptr = new BrokerManager(
-        server_address, server_port, server_group_list, query_manager);
-
+    auto ptr = new BrokerManager(config, query_manager);
     ref.reset(ptr);
 
     return osquery::Status::success();

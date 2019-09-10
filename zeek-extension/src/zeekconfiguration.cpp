@@ -63,13 +63,46 @@ const ConfigurationChecker::Constraints kConfigurationConstraints = {
       "",
       true
     }
-  }
+  },
+
+  {
+    "certificate_authority",
+
+    {
+      ConfigurationChecker::MemberConstraint::Type::String,
+      false,
+      "authentication",
+      false
+    }
+  },
+
+  {
+    "certificate",
+
+    {
+      ConfigurationChecker::MemberConstraint::Type::String,
+      false,
+      "authentication",
+      false
+    }
+  },
+
+  {
+    "key",
+
+    {
+      ConfigurationChecker::MemberConstraint::Type::String,
+      false,
+      "authentication",
+      false
+    }
+  },
 };
 // clang-format on
 } // namespace
 
 struct ZeekConfiguration::PrivateData final {
-  ConfigurationData config_data;
+  Context context;
 };
 
 osquery::Status ZeekConfiguration::create(Ref& ref, const std::string& path) {
@@ -93,20 +126,32 @@ osquery::Status ZeekConfiguration::create(Ref& ref, const std::string& path) {
 ZeekConfiguration::~ZeekConfiguration() {}
 
 const std::string& ZeekConfiguration::serverAddress() const {
-  return d->config_data.server_address;
+  return d->context.server_address;
 }
 
 std::uint16_t ZeekConfiguration::serverPort() const {
-  return d->config_data.server_port;
+  return d->context.server_port;
 }
 
 const std::vector<std::string>& ZeekConfiguration::groupList() const {
-  return d->config_data.group_list;
+  return d->context.group_list;
+}
+
+const std::string& ZeekConfiguration::certificateAuthority() const {
+  return d->context.certificate_authority;
+}
+
+const std::string& ZeekConfiguration::clientCertificate() const {
+  return d->context.client_certificate;
+}
+
+const std::string& ZeekConfiguration::clientKey() const {
+  return d->context.client_key;
 }
 
 osquery::Status ZeekConfiguration::parseConfigurationData(
-    ConfigurationData& config, const std::string& json) {
-  config = {};
+    Context& context, const std::string& json) {
+  context = {};
 
   rapidjson::Document document;
   document.Parse(json);
@@ -124,16 +169,34 @@ osquery::Status ZeekConfiguration::parseConfigurationData(
     return status;
   }
 
-  config.server_address = document["server_address"].GetString();
+  context.server_address = document["server_address"].GetString();
 
-  config.server_port =
+  context.server_port =
       static_cast<std::uint16_t>(document["server_port"].GetInt());
 
   const auto& group_list = document["group_list"];
 
   for (auto i = 0; i < group_list.Size(); ++i) {
     const auto& group = group_list[i].GetString();
-    config.group_list.push_back(group);
+    context.group_list.push_back(group);
+  }
+
+  if (document.HasMember("authentication")) {
+    const auto& auth_object = document["authentication"];
+
+    if (auth_object.HasMember("certificate_authority")) {
+      context.certificate_authority =
+          auth_object["certificate_authority"].GetString();
+    }
+
+    if (auth_object.HasMember("client_certificate")) {
+      context.client_certificate =
+          auth_object["client_certificate"].GetString();
+    }
+
+    if (auth_object.HasMember("client_key")) {
+      context.client_key = auth_object["client_key"].GetString();
+    }
   }
 
   return osquery::Status::success();
@@ -148,7 +211,7 @@ ZeekConfiguration::ZeekConfiguration(const std::string& path)
 
   bool use_default_settings = true;
   if (configuration_file) {
-    auto status = parseConfigurationData(d->config_data, sstream.str());
+    auto status = parseConfigurationData(d->context, sstream.str());
     if (status.ok()) {
       use_default_settings = false;
 
@@ -161,16 +224,16 @@ ZeekConfiguration::ZeekConfiguration(const std::string& path)
   if (use_default_settings) {
     LOG(WARNING) << "Using default configuration settings";
 
-    d->config_data.server_address = kDefaultServerAddress;
-    d->config_data.server_port = kDefaultServerPort;
-    d->config_data.group_list = kDefaultGroupList;
+    d->context.server_address = kDefaultServerAddress;
+    d->context.server_port = kDefaultServerPort;
+    d->context.group_list = kDefaultGroupList;
   }
 
-  VLOG(1) << "Zeek server address: " << d->config_data.server_address << ":"
-          << d->config_data.server_port;
+  VLOG(1) << "Zeek server address: " << d->context.server_address << ":"
+          << d->context.server_port;
 
   std::stringstream group_list;
-  for (const auto& group : d->config_data.group_list) {
+  for (const auto& group : d->context.group_list) {
     if (!group_list.str().empty()) {
       group_list << ", ";
     }

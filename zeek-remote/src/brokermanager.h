@@ -85,10 +85,7 @@ class BrokerManager final : public IBrokerManager {
   osquery::Status deleteSubscriber(const std::string& topic);
 
  protected:
-  BrokerManager(const std::string& server_address,
-                std::uint16_t server_port,
-                const std::vector<std::string>& server_group_list,
-                IQueryManager::Ref query_manager);
+  BrokerManager(const Configuration& config, IQueryManager::Ref query_manager);
 
  public:
   virtual ~BrokerManager() override;

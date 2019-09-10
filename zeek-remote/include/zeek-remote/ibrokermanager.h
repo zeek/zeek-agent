@@ -42,12 +42,21 @@ using BrokerSubscriberRef = std::shared_ptr<broker::subscriber>;
 class IBrokerManager {
  public:
   using Ref = std::unique_ptr<IBrokerManager>;
-  static osquery::Status create(
-      Ref& ref,
-      const std::string& server_address,
-      std::uint16_t server_port,
-      const std::vector<std::string>& server_group_list,
-      IQueryManager::Ref query_manager);
+
+  struct Configuration final {
+    std::string server_address;
+    std::uint16_t server_port{9999U};
+
+    std::vector<std::string> server_group_list;
+
+    std::string certificate_authority;
+    std::string client_certificate;
+    std::string client_key;
+  };
+
+  static osquery::Status create(Ref& ref,
+                                const Configuration& config,
+                                IQueryManager::Ref query_manager);
 
   virtual ~IBrokerManager() = default;
 
