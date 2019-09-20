@@ -227,9 +227,9 @@ osquery::Status ZeekDistributedPlugin::getQueries(std::string& json) {
     for (const auto& msg : subscriber_ref->poll()) {
       // Directly updates the daemon schedule if requested
       // Returns one time queries otherwise
-      assert(topic == msg.first);
+      assert(topic == caf::get<0>(msg));
 
-      broker::bro::Event event(msg.second);
+      broker::bro::Event event(caf::get<1>(msg));
       s = processMessage(event, topic, oT_queries);
       if (!s.ok()) {
         LOG(ERROR) << s.getMessage();

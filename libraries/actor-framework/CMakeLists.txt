@@ -146,6 +146,7 @@ function(generateCafCore)
     "${library_root}/src/uri_impl.cpp"
     "${library_root}/src/work_sharing.cpp"
     "${library_root}/src/work_stealing.cpp"
+    "${library_root}/src/string_algorithms.cpp"
   )
 
   target_link_libraries(thirdparty_caf_core PUBLIC
@@ -208,6 +209,7 @@ function(generateCafIO)
   target_link_libraries(thirdparty_caf_io PUBLIC
     zeek_common_settings
     zeek_thirdparty_module_settings
+    thirdparty_caf_core
   )
   
   target_compile_features(thirdparty_caf_io INTERFACE cxx_std_11)
@@ -232,6 +234,7 @@ function(generateCafOpenSSL)
     zeek_common_settings
     zeek_thirdparty_module_settings
     thirdparty_openssl
+    thirdparty_caf_io
   )
 
   target_compile_features(thirdparty_caf_openssl INTERFACE cxx_std_11)
