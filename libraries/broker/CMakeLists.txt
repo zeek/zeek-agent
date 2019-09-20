@@ -65,6 +65,7 @@ function(generateBroker)
   )
 
   target_include_directories(thirdparty_broker SYSTEM PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/generated"
     "${library_root}"
   )
 
@@ -72,6 +73,7 @@ function(generateBroker)
 
   target_compile_definitions(thirdparty_broker PRIVATE
     BROKER_HAVE_ROCKSDB=1
+    BROKER_LINUX=1
   )
 endfunction()
 
