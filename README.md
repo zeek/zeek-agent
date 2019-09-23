@@ -36,19 +36,12 @@ When the `cppcheck` tool is available, the `zeek_cppcheck` target can be built t
 Note: It's better not to use the one provided by the osquery toolchain (/usr/local/osquery/bin/cppcheck) as it's outdated and does not support the `compile_commands.json` format.
 
 # Installing Zeek
-## Main program files
-The Zeek install instructions can be found [on the official website](https://zeek.org/download/packages.html).
 
-Make sure that the `bin` folder for Zeek is inside the PATH environment variable. This can be usually achieved with the following command: `export PATH=${PATH}:/opt/bro/bin`.
-
-## Installing the osquery scripts
-1. Install the Zeek package manager: `pip install zkg`
-2. Initialize the package manager configuration: `zkg autoconfig`
-3. Enable the zeek-osquery-packages repository: `echo "osquery = https://github.com/iBigQ/zeek-osquery-packages" >> "${HOME}/.zkg/config" && zkg refresh`
-4. Install the scripts: `zkg install zeek-osquery-framework && zkg install --nodeps zeek-osquery-queries`
-5. Enable the scripts within Zeek: `zkg load zeek-osquery-framework && zkg load zeek-osquery-queries`
+To install Zeek and its osquery script framework, follow [these
+instructions](https://github.com/zeek/osquery-framework).
 
 # Installing osquery
+
 The latest version is required in order to run the extension correctly. Releases can be downloaded from the [GitHub release page](https://github.com/osquery/osquery/releases).
 
 # Configuration
