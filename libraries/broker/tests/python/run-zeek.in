@@ -1,0 +1,13 @@
+#! /usr/bin/env bash
+
+if [ -n "${ZEEK_EXECUTABLE}" ]; then
+    exec "${ZEEK_EXECUTABLE}" $@
+
+elif [ -n "${ZEEK_PATH_DEV}" ]; then
+    source "${ZEEK_PATH_DEV}"
+    exec zeek $@
+
+else
+    echo "No Zeek executable available" >&2
+    exit 1
+fi

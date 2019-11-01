@@ -38,8 +38,11 @@ function(generateZeekRemote)
   )
 
   target_link_libraries(zeek-remote PUBLIC
-    thirdparty_broker
-    thirdparty_caf
+    libcaf_core
+    libcaf_core_shared
+    libcaf_io_shared
+    libcaf_openssl_shared
+    broker
     zeek_cxx_settings
   )
 endfunction()

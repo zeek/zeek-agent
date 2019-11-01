@@ -1,0 +1,34 @@
+Broker 2.0.0
+============
+
+This release contains breaking API changes (for C++ code, not Python)
+in order to increase messaging efficiency via reduction of data
+copying.  Specifically:
+
+- ``broker::subscriber::get()`` now returns a different, copy-on-write
+  type called ``broker::data_message`` rather than an
+  ``std::pair<topic, data>``.  For example this old code::
+
+      auto sub = ep.make_subscriber({"/topic/test"});
+      auto msg = sub.get();
+      auto& topic = msg.first;
+      auto& data = msg.second
+
+  can be changed to::
+
+      auto sub = ep.make_subscriber({"/topic/test"});
+      auto msg = sub.get();
+      auto& topic = broker::get_topic(msg);
+      auto& data = broker::get_data(msg);
+
+- ``broker::endpoint::publish(vector)`` now takes a vector of the new
+  ``broker::data_message`` type, not ``std::pair<topic, data>``
+
+- Generally, all type aliases within classes, like
+  ``value_type = std::pair<topic, data>``, have been changed to use the
+  new ``broker::data_message`` type.
+
+- The semantics of message forwarding have changed slightly: the
+  first sender of the message is now the one that applies the initial
+  TTL value.  Previously, the first receiver would be the one to
+  apply the initial TTL.

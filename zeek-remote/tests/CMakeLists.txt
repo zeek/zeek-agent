@@ -10,8 +10,7 @@ cmake_minimum_required(VERSION 3.10)
 
 function(zeekRemoteTests)
   set(library_list
-    thirdparty_caf
-    thirdparty_broker
+    broker
   )
 
   set(target_name_list

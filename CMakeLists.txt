@@ -15,25 +15,61 @@ include(cmake/utils.cmake)
 include(cmake/options.cmake)
 
 function(osqueryZeekMain)
-  if(NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-    message(WARNING "osquery-zeek: Unsupported platform")
-    return()
-  endif()
+
+  #if(NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+  #  message(WARNING "osquery-zeek: Unsupported platform")
+  #  return()
+  #endif()
 
   generateZeekSettingsTarget()
   geneateZeekTestsTarget()
   generateClangTidyTarget()
   generateCppcheckTarget()
 
+  set(BROKER_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libraries/broker)
+  set(DISABLE_PYTHON_BINDINGS true) # Not Needed in the Project, and produces Clang Warnings
+  set(BROKER_DISABLE_TESTS true)
+
+  # Include Directories from Broker and CAF that are included in Zeek
+  include_directories(BEFORE 
+                      ${CMAKE_CURRENT_BUILD_DIR}/libraries/broker/include
+                      ${CMAKE_CURRENT_SOURCE_DIR}/libraries/broker/include
+                      ${CMAKE_CURRENT_SOURCE_DIR}/libraries/broker
+
+                      ${CMAKE_CURRENT_SOURCE_DIR}/libraries/broker/3rdparty/caf/libcaf_core
+                      ${CMAKE_CURRENT_SOURCE_DIR}/libraries/broker/3rdparty/caf/libcaf_io
+                      ${CMAKE_CURRENT_SOURCE_DIR}/libraries/broker/3rdparty/caf/libcaf_openssl
+                      ${CMAKE_CURRENT_SOURCE_DIR}/libraries/broker/3rdparty/caf/libcaf_test
+                      ${CMAKE_CURRENT_BUILD_DIR}/libraries/broker/3rdparty/caf/libcaf_core
+                      )
+
   set(subdirectory_list
-    libraries
     zeek-remote
     zeek-extension
+    # libraries 
   )
+
+  set(library_list
+    # todo(alessandro): Remove these once the extension is migrated to the
+    # osquery 4.x SDK
+    sqlite
+    rocksdb
+    googletest
+
+    # todo(alessandro): Uncomment these once the extension is migrated to the
+    # osquery 4.x SDK
+    # rapidjson
+    broker
+  )
+
+foreach(library ${library_list})
+    add_subdirectory("libraries/${library}")
+  endforeach()
 
   foreach(subdirectory ${subdirectory_list})
     add_subdirectory("${subdirectory}")
   endforeach()
+
 endfunction()
 
 function(geneateZeekTestsTarget)

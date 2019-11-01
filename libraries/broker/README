@@ -1,0 +1,65 @@
+.. _User Manual: https://docs.zeek.org/projects/broker
+
+================================
+Broker: Zeek's Messaging Library
+================================
+
+The Broker library implements Zeek's high-level communication patterns:
+
+    - remote logging
+    - remote events
+    - distributed data stores
+
+Remote logging and events all follow a pub/sub communication model
+between Broker endpoints that are directly peered with each other.  An
+endpoint also has the option of subscribing to its own messages.
+Subscriptions are matched prefix-wise and endpoints have the capability
+of fine-tuning the subscription topic strings they wish to advertise to
+peers as well as the messages they wish to send to them.
+
+The distributed data store functionality allows a master data store
+associated with one Broker endpoint to be cloned at peer endpoints which
+may then perform lightweight, local queries against the clone, which
+automatically stays synchronized with the master store.  Clones
+cannot modify their content directly, instead they send modifications
+to the centralized master store which applies them and then broadcasts
+them to all clones.
+
+Applications which integrate the Broker library may communicate with
+each other using the above-mentioned patterns which are common to Zeek.
+
+See the `User Manual`_ for more information.  For offline reading, it's
+also available in the ``doc/`` directory of the source tree.
+
+See the NEWS file for the most important release notes and the CHANGES
+file for the complete history of changes.
+
+Dependencies
+------------
+
+Compiling Broker requires the following libraries/tools to already be
+installed:
+
+    * C++ compiler with C++11 support    (GCC 4.8+ or Clang 3.3+)
+    * OpenSSL headers/libraries          (http://www.openssl.org)
+    * CMake 2.8.12 or greater            (https://cmake.org)
+
+The optional Python bindings also require Python 2.7 or greater
+along with Python development packages.  For Python 2.7, you'll
+also need the ``ipaddress`` backport from Python 3.
+
+By default, Broker will use an integrated version of the C++ Actor
+Framework (CAF; https://actor-framework.org), though there's still the
+option to specify an exernal CAF version via the ``--with-caf=``
+configure script option.
+
+Compiling/Installing
+--------------------
+
+To compile and install into ``/usr/local``::
+
+    ./configure
+    make
+    make install
+
+See ``./configure --help`` for more advanced configuration options.
