@@ -3,7 +3,10 @@
 #include "audispconsumer.h"
 #include "iauparseinterface.h"
 
+#include <map>
 #include <optional>
+#include <string>
+#include <vector>
 
 #include <zeek/iaudispconsumer.h>
 
@@ -28,9 +31,26 @@ public:
     std::int64_t exit_code{0};
     std::int64_t process_id{0};
     std::int64_t parent_process_id{0};
+    bool succeeded{false};
+  };
+
+  struct RawExecveRecordData final {
+    int argc{0};
+    std::map<std::string, std::string> argument_list;
+  };
+
+  struct ExecveRecordData final {
+    int argc{0};
+    std::vector<std::string> argument_list;
   };
 
   static Status parseSyscallRecord(std::optional<SyscallRecordData> &data,
                                    IAuparseInterface::Ref auparse);
+
+  static Status parseRawExecveRecord(RawExecveRecordData &raw_data,
+                                     IAuparseInterface::Ref auparse);
+
+  static Status processExecveRecord(ExecveRecordData &data,
+                                    RawExecveRecordData &raw_data);
 };
 } // namespace zeek

@@ -57,6 +57,83 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
         REQUIRE(data.exit_code == 0);
         REQUIRE(data.process_id == 7841);
         REQUIRE(data.parent_process_id == 6882);
+        REQUIRE(data.succeeded);
+      }
+    }
+  }
+
+  GIVEN("a list of AUDIT_EXECVE records with split arguments") {
+    // clang-format off
+    static const MockedAuparseInterface::FieldList kAuditExecveRecord01 = {
+      { "type", "1309" },
+      { "argc", "4" },
+      { "a0", "arg_0" }
+    };
+    // clang-format on
+
+    // clang-format off
+    static const MockedAuparseInterface::FieldList kAuditExecveRecord02 = {
+      { "type", "1309" },
+      { "a1_len", "5" },
+      { "a1[0]", "arg" }
+    };
+    // clang-format on
+
+    // clang-format off
+    static const MockedAuparseInterface::FieldList kAuditExecveRecord03 = {
+      { "type", "1309" },
+      { "a1[1]", "_1" }
+    };
+    // clang-format on
+
+    // clang-format off
+    static const MockedAuparseInterface::FieldList kAuditExecveRecord04 = {
+      { "type", "1309" },
+      { "a2", "arg_2" },
+      { "a3", "arg_3" }
+    };
+    // clang-format on
+
+    // clang-format off
+    static const std::vector<MockedAuparseInterface::FieldList> kAuditExecveRecordList = {
+      kAuditExecveRecord01,
+      kAuditExecveRecord02,
+      kAuditExecveRecord03,
+      kAuditExecveRecord04
+    };
+    // clang-format on
+
+    WHEN("parsing the event records") {
+      AudispConsumer::RawExecveRecordData raw_execve_record;
+
+      for (const auto &mocked_record : kAuditExecveRecordList) {
+        MockedAuparseInterface::Ref auparse;
+        auto status = MockedAuparseInterface::create(auparse, mocked_record);
+        REQUIRE(status.succeeded());
+
+        status =
+            AudispConsumer::parseRawExecveRecord(raw_execve_record, auparse);
+
+        REQUIRE(status.succeeded());
+      }
+
+      REQUIRE(raw_execve_record.argc == 4);
+      REQUIRE(raw_execve_record.argument_list.size() == 5U);
+
+      AudispConsumer::ExecveRecordData execve_record;
+      auto status =
+          AudispConsumer::processExecveRecord(execve_record, raw_execve_record);
+
+      REQUIRE(status.succeeded());
+
+      THEN("record data is captured and assembled correctly") {
+        REQUIRE(execve_record.argc == 4);
+        REQUIRE(execve_record.argument_list.size() == 4U);
+
+        REQUIRE(execve_record.argument_list.at(0U) == "arg_0");
+        REQUIRE(execve_record.argument_list.at(1U) == "arg_1");
+        REQUIRE(execve_record.argument_list.at(2U) == "arg_2");
+        REQUIRE(execve_record.argument_list.at(3U) == "arg_3");
       }
     }
   }
