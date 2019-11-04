@@ -121,8 +121,8 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
       REQUIRE(raw_execve_record.argument_list.size() == 5U);
 
       AudispConsumer::ExecveRecordData execve_record;
-      auto status =
-          AudispConsumer::processExecveRecord(execve_record, raw_execve_record);
+      auto status = AudispConsumer::processExecveRecords(execve_record,
+                                                         raw_execve_record);
 
       REQUIRE(status.succeeded());
 

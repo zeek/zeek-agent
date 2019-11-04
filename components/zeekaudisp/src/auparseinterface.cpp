@@ -23,8 +23,8 @@ Status AuparseInterface::create(Ref &obj) {
 }
 
 AuparseInterface::~AuparseInterface() {
-  auparse_flush_feed(d->auparse_state);
   auparse_destroy(d->auparse_state);
+  d->auparse_state = nullptr;
 }
 
 int AuparseInterface::flushFeed() {

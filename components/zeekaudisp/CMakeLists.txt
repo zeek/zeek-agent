@@ -14,6 +14,10 @@ function(zeekAgentComponentsAudisp)
     src/iauparseinterface.h
     src/auparseinterface.h
     src/auparseinterface.cpp
+
+    src/iaudispproducer.h
+    src/audispsocketreader.h
+    src/audispsocketreader.cpp
   )
 
   target_include_directories("${PROJECT_NAME}"
@@ -41,7 +45,11 @@ function(zeekAgentComponentsAudisp)
       tests/mockedauparseinterface.cpp
 
       tests/audit_utils.cpp
-      tests/audispconsumer.cpp
+      tests/audisp_records.cpp
+      tests/audisp_events.cpp
+
+      tests/mockedaudispproducer.h
+      tests/mockedaudispproducer.cpp
   )
 endfunction()
 

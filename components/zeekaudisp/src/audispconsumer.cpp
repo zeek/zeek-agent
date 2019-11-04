@@ -1,20 +1,220 @@
 #include "audispconsumer.h"
+#include "audispsocketreader.h"
+#include "auparseinterface.h"
 
+#include <atomic>
 #include <cstring>
+#include <mutex>
 #include <unordered_map>
 
 #include <asm/unistd.h>
+#include <libaudit.h>
 
 namespace zeek {
 struct AudispConsumer::PrivateData final {
-  std::string audisp_socket_path;
+  IAudispProducer::Ref audisp_producer;
+  IAuparseInterface::Ref auparse_interface;
+
+  std::mutex processed_event_list_mutex;
+  AuditEventList processed_event_list;
+
+  std::atomic_bool parser_error{false};
 };
 
-AudispConsumer::~AudispConsumer() {}
+Status
+AudispConsumer::createWithProducer(Ref &obj,
+                                   IAudispProducer::Ref audisp_producer) {
+  obj.reset();
 
-AudispConsumer::AudispConsumer(const std::string &audisp_socket_path)
+  try {
+    auto ptr = new AudispConsumer(std::move(audisp_producer));
+    audisp_producer = {};
+
+    obj.reset(ptr);
+
+    return Status::success();
+
+  } catch (const std::bad_alloc &) {
+    return Status::failure("Memory allocation failure");
+
+  } catch (const Status &status) {
+    return status;
+  }
+}
+
+AudispConsumer::~AudispConsumer() { d->auparse_interface->flushFeed(); }
+
+Status AudispConsumer::processEvents() {
+  std::string buffer;
+  auto status = d->audisp_producer->read(buffer);
+  if (!status.succeeded()) {
+    return status;
+  }
+
+  d->auparse_interface->feed(buffer.data(), buffer.size());
+  return Status::success();
+}
+
+Status AudispConsumer::getEvents(AuditEventList &event_list) {
+  event_list = {};
+
+  d->auparse_interface->flushFeed();
+
+  {
+    std::lock_guard<std::mutex> lock(d->processed_event_list_mutex);
+
+    event_list = std::move(d->processed_event_list);
+    d->processed_event_list = {};
+  }
+
+  Status status;
+  if (d->parser_error) {
+    status =
+        Status::failure("One or more events could not be parsed correctly");
+    d->parser_error = false;
+  } else {
+    status = Status::success();
+  }
+
+  return status;
+}
+
+AudispConsumer::AudispConsumer(IAudispProducer::Ref audisp_producer)
     : d(new PrivateData) {
-  d->audisp_socket_path = audisp_socket_path;
+  d->audisp_producer = std::move(audisp_producer);
+  audisp_producer = {};
+
+  auto status = AuparseInterface::create(d->auparse_interface);
+  if (!status.succeeded()) {
+    throw status;
+  }
+
+  d->auparse_interface->addCallback(auparseCallbackDispatcher, this, nullptr);
+}
+
+void AudispConsumer::auparseCallbackDispatcher(auparse_state_t *,
+                                               auparse_cb_event_t event_type,
+                                               void *user_data) {
+
+  auto &instance = *static_cast<AudispConsumer *>(user_data);
+  instance.auparseCallback(event_type);
+}
+
+void AudispConsumer::auparseCallback(auparse_cb_event_t event_type) {
+  if (event_type != AUPARSE_CB_EVENT_READY) {
+    return;
+  }
+
+  d->auparse_interface->firstRecord();
+
+  auto record_type = d->auparse_interface->getType();
+  if (record_type != AUDIT_SYSCALL) {
+    return;
+  }
+
+  AuditEvent audit_event;
+  std::optional<SyscallRecordData> syscall_data;
+  auto status = parseSyscallRecord(syscall_data, d->auparse_interface);
+  if (!status.succeeded()) {
+    d->parser_error = true;
+    return;
+  }
+
+  if (!syscall_data.has_value()) {
+    return;
+  }
+
+  audit_event.syscall_data = std::move(syscall_data.value());
+  syscall_data = {};
+
+  IAudispConsumer::RawExecveRecordData raw_execve_data;
+  IAudispConsumer::PathRecordData path_data;
+  std::string cwd_data;
+
+  while (d->auparse_interface->nextRecord() > 0) {
+    record_type = d->auparse_interface->getType();
+    Status status;
+
+    switch (record_type) {
+    case AUDIT_EXECVE:
+      status = parseRawExecveRecord(raw_execve_data, d->auparse_interface);
+      break;
+
+    case AUDIT_CWD:
+      status = parseCwdRecord(cwd_data, d->auparse_interface);
+      break;
+
+    case AUDIT_PATH:
+      status = parsePathRecord(path_data, d->auparse_interface);
+      break;
+
+    default:
+      status = Status::success();
+      break;
+    }
+
+    if (!status.succeeded()) {
+      d->parser_error = true;
+      return;
+    }
+  }
+
+  bool process_execve_records{false};
+
+  switch (audit_event.syscall_data.type) {
+  case IAudispConsumer::SyscallRecordData::Type::Execve:
+  case IAudispConsumer::SyscallRecordData::Type::ExecveAt:
+    process_execve_records = true;
+    break;
+
+  case IAudispConsumer::SyscallRecordData::Type::Fork:
+  case IAudispConsumer::SyscallRecordData::Type::VFork:
+  case IAudispConsumer::SyscallRecordData::Type::Clone:
+    process_execve_records = false;
+    break;
+
+  default:
+    d->parser_error = true;
+    return;
+  }
+
+  if (process_execve_records) {
+    if (raw_execve_data.argument_list.empty()) {
+      d->parser_error = true;
+      return;
+    }
+
+    IAudispConsumer::ExecveRecordData execve_data;
+    status = processExecveRecords(execve_data, raw_execve_data);
+    if (!status.succeeded()) {
+      d->parser_error = true;
+      return;
+    }
+
+    if (execve_data.argument_list.empty()) {
+      d->parser_error = true;
+      return;
+    }
+
+    audit_event.execve_data = std::move(execve_data);
+    execve_data = {};
+
+    if (path_data.empty()) {
+      d->parser_error = true;
+      return;
+    }
+
+    audit_event.path_data = std::move(path_data);
+    path_data = {};
+
+    audit_event.cwd_data = std::move(cwd_data);
+    cwd_data = {};
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(d->processed_event_list_mutex);
+    d->processed_event_list.push_back(std::move(audit_event));
+  }
 }
 
 Status IAudispConsumer::create(Ref &obj,
@@ -22,10 +222,14 @@ Status IAudispConsumer::create(Ref &obj,
   obj.reset();
 
   try {
-    auto ptr = new AudispConsumer(audisp_socket_path);
-    obj.reset(ptr);
+    IAudispProducer::Ref audisp_producer;
+    auto status =
+        AudispSocketReader::create(audisp_producer, audisp_socket_path);
+    if (!status.succeeded()) {
+      return status;
+    }
 
-    return Status::success();
+    return AudispConsumer::createWithProducer(obj, std::move(audisp_producer));
 
   } catch (const std::bad_alloc &) {
     return Status::failure("Memory allocation failure");
@@ -122,6 +326,7 @@ Status AudispConsumer::parseRawExecveRecord(RawExecveRecordData &raw_data,
 
     } else if (field_name[0] != 'a' ||
                std::strstr(field_name, "_len") != nullptr) {
+
       continue;
     }
 
@@ -131,8 +336,8 @@ Status AudispConsumer::parseRawExecveRecord(RawExecveRecordData &raw_data,
   return Status::success();
 }
 
-Status AudispConsumer::processExecveRecord(ExecveRecordData &data,
-                                           RawExecveRecordData &raw_data) {
+Status AudispConsumer::processExecveRecords(ExecveRecordData &data,
+                                            RawExecveRecordData &raw_data) {
   data = {};
 
   ExecveRecordData output;
