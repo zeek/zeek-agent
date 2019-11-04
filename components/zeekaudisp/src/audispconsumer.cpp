@@ -189,4 +189,28 @@ Status AudispConsumer::processExecveRecord(ExecveRecordData &data,
 
   return Status::success();
 }
+
+Status AudispConsumer::parseCwdRecord(std::string &data,
+                                      IAuparseInterface::Ref auparse) {
+  data = {};
+
+  auparse->firstField();
+
+  do {
+    auto field_name = auparse->getFieldName();
+    auto field_value = auparse->getFieldStr();
+
+    if (std::strcmp(field_name, "cwd") == 0) {
+      data = field_value;
+      break;
+    }
+  } while (auparse->nextField() > 0);
+
+  if (data.empty()) {
+    return Status::failure(
+        "The cwd field was missing from the AUDIT_CWD record");
+  }
+
+  return Status::success();
+}
 } // namespace zeek

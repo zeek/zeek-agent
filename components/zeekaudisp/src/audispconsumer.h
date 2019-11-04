@@ -52,5 +52,8 @@ public:
 
   static Status processExecveRecord(ExecveRecordData &data,
                                     RawExecveRecordData &raw_data);
+
+  static Status parseCwdRecord(std::string &data,
+                               IAuparseInterface::Ref auparse);
 };
 } // namespace zeek

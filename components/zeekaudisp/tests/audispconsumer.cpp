@@ -137,5 +137,31 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
       }
     }
   }
+
+  GIVEN("a valid AUDIT_CWD record") {
+    static const std::string kCwdFolderPath{"/path/to/folder"};
+
+    // clang-format off
+    static const MockedAuparseInterface::FieldList kAuditCwdRecord = {
+      { "type", "1307" },
+      { "cwd", kCwdFolderPath }
+    };
+    // clang-format on
+
+    MockedAuparseInterface::Ref auparse;
+    auto status = MockedAuparseInterface::create(auparse, kAuditCwdRecord);
+    REQUIRE(status.succeeded());
+
+    WHEN("parsing the event record") {
+      std::string cwd_data;
+      status = AudispConsumer::parseCwdRecord(cwd_data, auparse);
+
+      REQUIRE(status.succeeded());
+
+      THEN("record data is captured correctly") {
+        REQUIRE(cwd_data == kCwdFolderPath);
+      }
+    }
+  }
 }
 } // namespace zeek
