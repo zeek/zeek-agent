@@ -213,4 +213,48 @@ Status AudispConsumer::parseCwdRecord(std::string &data,
 
   return Status::success();
 }
+
+Status AudispConsumer::parsePathRecord(PathRecordData &data,
+                                       IAuparseInterface::Ref auparse) {
+  auparse->firstField();
+
+  std::string path_value;
+  bool first_record{false};
+
+  std::size_t parsed_field_count{0U};
+
+  do {
+    auto field_name = auparse->getFieldName();
+    auto field_value = auparse->getFieldStr();
+
+    if (std::strcmp(field_name, "name") == 0) {
+      path_value = field_value;
+      ++parsed_field_count;
+
+    } else if (std::strcmp(field_name, "item") == 0) {
+      if (std::strcmp(field_value, "0") == 0) {
+        first_record = true;
+      }
+
+      ++parsed_field_count;
+    }
+
+    if (parsed_field_count == 2U) {
+      break;
+    }
+
+  } while (auparse->nextField() > 0);
+
+  if (parsed_field_count != 2U) {
+    return Status::failure(
+        "One or more fields are missing from the AUDIT_PATH record");
+  }
+
+  if (first_record) {
+    data = {};
+  }
+
+  data.push_back(std::move(path_value));
+  return Status::success();
+}
 } // namespace zeek

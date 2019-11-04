@@ -163,5 +163,75 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
       }
     }
   }
+
+  GIVEN("a valid pair of AUDIT_PATH records") {
+    static const std::string kCwdFolderPath01{"/path/to/folder1"};
+    static const std::string kCwdFolderPath02{"/path/to/folder1"};
+
+    // clang-format off
+    static const MockedAuparseInterface::FieldList kAuditCwdRecord01 = {
+      { "type", "1302"},
+      { "item", "0" },
+      { "name", kCwdFolderPath01 },
+      { "inode", "5930" },
+      { "dev", "00:18" },
+      { "mode", "0100755" },
+      { "ouid", "0" },
+      { "ogid", "0" },
+      { "rdev", "00:00" },
+      { "nametype", "NORMAL" },
+      { "cap_fp", "0000000000000000" },
+      { "cap_fi", "0000000000000000" },
+      { "cap_fe", "0" },
+      { "cap_fver", "0" }
+    };
+    // clang-format on
+
+    // clang-format off
+    static const MockedAuparseInterface::FieldList kAuditCwdRecord02 = {
+      { "type", "1302"},
+      { "item", "1" },
+      { "name", kCwdFolderPath02 },
+      { "inode", "6763" },
+      { "dev", "00:18" },
+      { "mode", "0100755" },
+      { "ouid", "0" },
+      { "ogid", "0" },
+      { "rdev", "00:00" },
+      { "nametype", "NORMAL" },
+      { "cap_fp", "0000000000000000" },
+      { "cap_fi", "0000000000000000" },
+      { "cap_fe", "0" },
+      { "cap_fver", "0" }
+    };
+    // clang-format on
+
+    // clang-format off
+    static const std::vector<MockedAuparseInterface::FieldList> kAuditPathRecordList = {
+      kAuditCwdRecord01,
+      kAuditCwdRecord02
+    };
+    // clang-format on
+
+    WHEN("parsing the event record") {
+      AudispConsumer::PathRecordData path_data = {"dummy_path"};
+
+      for (const auto &mocked_record : kAuditPathRecordList) {
+        MockedAuparseInterface::Ref auparse;
+        auto status = MockedAuparseInterface::create(auparse, mocked_record);
+        REQUIRE(status.succeeded());
+
+        status = AudispConsumer::parsePathRecord(path_data, auparse);
+        REQUIRE(status.succeeded());
+      }
+
+      THEN("record data is captured correctly") {
+        REQUIRE(path_data.size() == 2U);
+
+        REQUIRE(path_data.at(0U) == kCwdFolderPath01);
+        REQUIRE(path_data.at(1U) == kCwdFolderPath02);
+      }
+    }
+  }
 }
 } // namespace zeek

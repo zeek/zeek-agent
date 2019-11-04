@@ -44,6 +44,8 @@ public:
     std::vector<std::string> argument_list;
   };
 
+  using PathRecordData = std::vector<std::string>;
+
   static Status parseSyscallRecord(std::optional<SyscallRecordData> &data,
                                    IAuparseInterface::Ref auparse);
 
@@ -55,5 +57,8 @@ public:
 
   static Status parseCwdRecord(std::string &data,
                                IAuparseInterface::Ref auparse);
+
+  static Status parsePathRecord(PathRecordData &data,
+                                IAuparseInterface::Ref auparse);
 };
 } // namespace zeek
