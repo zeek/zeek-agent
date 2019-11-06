@@ -1,0 +1,6 @@
+language: cpp
+
+branches:
+  only:
+  - master
+  - /release\/.*/
