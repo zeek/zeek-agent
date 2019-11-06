@@ -1,6 +1,8 @@
 #pragma once
 
+#include <map>
 #include <memory>
+#include <vector>
 
 #include <zeek/status.h>
 
@@ -8,13 +10,18 @@ namespace zeek {
 class IAudispConsumer {
 public:
   struct SyscallRecordData final {
-    enum class Type { Execve, ExecveAt, Fork, VFork, Clone };
+    enum class Type { Execve, ExecveAt, Fork, VFork, Clone, Bind, Connect };
 
     Type type;
     std::int64_t exit_code{0};
     std::int64_t process_id{0};
     std::int64_t parent_process_id{0};
     bool succeeded{false};
+    std::int64_t auid{0};
+    std::int64_t uid{0};
+    std::int64_t euid{0};
+    std::int64_t gid{0};
+    std::int64_t egid{0};
   };
 
   struct RawExecveRecordData final {
@@ -27,18 +34,25 @@ public:
     std::vector<std::string> argument_list;
   };
 
-  using PathRecordData = std::vector<std::string>;
+  struct PathRecord final {
+    std::string path;
+    std::int64_t mode{0};
+    std::int64_t ouid{0};
+    std::int64_t ogid{0};
+  };
+
+  using PathRecordData = std::vector<PathRecord>;
 
   struct AuditEvent final {
     SyscallRecordData syscall_data;
     std::optional<ExecveRecordData> execve_data;
     std::optional<PathRecordData> path_data;
-    std::string cwd_data;
+    std::optional<std::string> cwd_data;
   };
 
   using AuditEventList = std::vector<AuditEvent>;
 
-  using Ref = std::shared_ptr<IAudispConsumer>;
+  using Ref = std::unique_ptr<IAudispConsumer>;
   static Status create(Ref &obj, const std::string &audisp_socket_path);
 
   IAudispConsumer() = default;

@@ -17,13 +17,43 @@ function(zeekAgent)
   add_executable("${PROJECT_NAME}"
     src/main.cpp
 
-    src/dummytable.h
-    src/dummytable.cpp
+    src/zeekagent.h
+    src/zeekagent.cpp
+
+    src/servicemanager.h
+    src/servicemanager.cpp
+
+    src/tables/service_manager/servicemanagertableplugin.h
+    src/tables/service_manager/servicemanagertableplugin.cpp
+
+    src/tables/audisp/audispservice.h
+    src/tables/audisp/audispservice.cpp
+
+    src/tables/audisp/processeventstableplugin.h
+    src/tables/audisp/processeventstableplugin.cpp
+
+    src/tables/audisp/socketeventstableplugin.h
+    src/tables/audisp/socketeventstableplugin.cpp
   )
 
   target_link_libraries("${PROJECT_NAME}" PRIVATE
     zeek_agent_cxx_settings
+    zeek_audisp
     zeek_database
+  )
+
+  target_include_directories("${PROJECT_NAME}" PRIVATE
+    src
+  )
+
+  generateZeekAgentTest(
+    SOURCE_TARGET
+      "${PROJECT_NAME}"
+
+    SOURCES
+      tests/main.cpp
+
+      tests/processeventstableplugin.cpp
   )
 endfunction()
 

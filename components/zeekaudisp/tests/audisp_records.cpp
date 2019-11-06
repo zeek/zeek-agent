@@ -6,6 +6,12 @@
 namespace zeek {
 SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
   GIVEN("a valid AUDIT_SYSCALL record for an execve event") {
+    static const std::string kExpectedAuid{"1"};
+    static const std::string kExpectedUid{"2"};
+    static const std::string kExpectedEuid{"3"};
+    static const std::string kExpectedGid{"4"};
+    static const std::string kExpectedEgid{"5"};
+
     // clang-format off
     static const MockedAuparseInterface::FieldList kAuditSyscallRecord = {
       { "type", "1300" },
@@ -20,13 +26,13 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
       { "items", "2" },
       { "ppid", "6882" },
       { "pid", "7841" },
-      { "auid", "1000" },
-      { "uid", "1000" },
-      { "gid", "1000" },
-      { "euid", "1000" },
+      { "auid", kExpectedAuid },
+      { "uid", kExpectedUid },
+      { "gid", kExpectedGid },
+      { "euid", kExpectedEuid },
       { "suid", "1000" },
       { "fsuid", "1000" },
-      { "egid", "1000" },
+      { "egid", kExpectedEgid },
       { "sgid", "1000" },
       { "fsgid", "1000" },
       { "tty", "pts1" },
@@ -57,6 +63,11 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
         REQUIRE(data.exit_code == 0);
         REQUIRE(data.process_id == 7841);
         REQUIRE(data.parent_process_id == 6882);
+        REQUIRE(data.auid == std::strtoll(kExpectedAuid.c_str(), nullptr, 10));
+        REQUIRE(data.uid == std::strtoll(kExpectedUid.c_str(), nullptr, 10));
+        REQUIRE(data.gid == std::strtoll(kExpectedGid.c_str(), nullptr, 10));
+        REQUIRE(data.euid == std::strtoll(kExpectedEuid.c_str(), nullptr, 10));
+        REQUIRE(data.egid == std::strtoll(kExpectedEgid.c_str(), nullptr, 10));
         REQUIRE(data.succeeded);
       }
     }
@@ -67,7 +78,7 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
     static const MockedAuparseInterface::FieldList kAuditExecveRecord01 = {
       { "type", "1309" },
       { "argc", "4" },
-      { "a0", "arg_0" }
+      { "a0", "\"arg_0\"" }
     };
     // clang-format on
 
@@ -89,7 +100,7 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
     // clang-format off
     static const MockedAuparseInterface::FieldList kAuditExecveRecord04 = {
       { "type", "1309" },
-      { "a2", "arg_2" },
+      { "a2", "6172675F32" },
       { "a3", "arg_3" }
     };
     // clang-format on
@@ -165,19 +176,26 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
   }
 
   GIVEN("a valid pair of AUDIT_PATH records") {
-    static const std::string kCwdFolderPath01{"/path/to/folder1"};
-    static const std::string kCwdFolderPath02{"/path/to/folder1"};
+    static const std::string kFolderPath01{"/path/to/folder1"};
+    static const std::string kFolderPathMode01{"0100644"};
+    static const std::string kFolderPathOuid01{"111"};
+    static const std::string kFolderPathOgid01{"222"};
+
+    static const std::string kFolderPath02{"/path/to/folder2"};
+    static const std::string kFolderPathMode02{"0100755"};
+    static const std::string kFolderPathOuid02{"333"};
+    static const std::string kFolderPathOgid02{"444"};
 
     // clang-format off
-    static const MockedAuparseInterface::FieldList kAuditCwdRecord01 = {
+    static const MockedAuparseInterface::FieldList kAuditRecord01 = {
       { "type", "1302"},
       { "item", "0" },
-      { "name", kCwdFolderPath01 },
+      { "name", kFolderPath01 },
       { "inode", "5930" },
       { "dev", "00:18" },
-      { "mode", "0100755" },
-      { "ouid", "0" },
-      { "ogid", "0" },
+      { "mode", kFolderPathMode01 },
+      { "ouid", kFolderPathOuid01 },
+      { "ogid", kFolderPathOgid01 },
       { "rdev", "00:00" },
       { "nametype", "NORMAL" },
       { "cap_fp", "0000000000000000" },
@@ -188,15 +206,15 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
     // clang-format on
 
     // clang-format off
-    static const MockedAuparseInterface::FieldList kAuditCwdRecord02 = {
+    static const MockedAuparseInterface::FieldList kAuditRecord02 = {
       { "type", "1302"},
       { "item", "1" },
-      { "name", kCwdFolderPath02 },
+      { "name", kFolderPath02 },
       { "inode", "6763" },
       { "dev", "00:18" },
-      { "mode", "0100755" },
-      { "ouid", "0" },
-      { "ogid", "0" },
+      { "mode", kFolderPathMode02 },
+      { "ouid", kFolderPathOuid02 },
+      { "ogid", kFolderPathOgid02 },
       { "rdev", "00:00" },
       { "nametype", "NORMAL" },
       { "cap_fp", "0000000000000000" },
@@ -208,13 +226,13 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
 
     // clang-format off
     static const std::vector<MockedAuparseInterface::FieldList> kAuditPathRecordList = {
-      kAuditCwdRecord01,
-      kAuditCwdRecord02
+      kAuditRecord01,
+      kAuditRecord02
     };
     // clang-format on
 
     WHEN("parsing the event record") {
-      AudispConsumer::PathRecordData path_data = {"dummy_path"};
+      AudispConsumer::PathRecordData path_data = {{"dummy_path", 100}};
 
       for (const auto &mocked_record : kAuditPathRecordList) {
         MockedAuparseInterface::Ref auparse;
@@ -228,8 +246,25 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
       THEN("record data is captured correctly") {
         REQUIRE(path_data.size() == 2U);
 
-        REQUIRE(path_data.at(0U) == kCwdFolderPath01);
-        REQUIRE(path_data.at(1U) == kCwdFolderPath02);
+        REQUIRE(path_data.at(0U).path == kFolderPath01);
+        REQUIRE(path_data.at(0U).mode ==
+                std::strtoll(kFolderPathMode01.c_str(), nullptr, 8));
+
+        REQUIRE(path_data.at(0U).ouid ==
+                std::strtoll(kFolderPathOuid01.c_str(), nullptr, 10));
+
+        REQUIRE(path_data.at(0U).ogid ==
+                std::strtoll(kFolderPathOgid01.c_str(), nullptr, 10));
+
+        REQUIRE(path_data.at(1U).path == kFolderPath02);
+        REQUIRE(path_data.at(1U).mode ==
+                std::strtoll(kFolderPathMode02.c_str(), nullptr, 8));
+
+        REQUIRE(path_data.at(1U).ouid ==
+                std::strtoll(kFolderPathOuid02.c_str(), nullptr, 10));
+
+        REQUIRE(path_data.at(1U).ogid ==
+                std::strtoll(kFolderPathOgid02.c_str(), nullptr, 10));
       }
     }
   }

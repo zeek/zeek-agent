@@ -3,11 +3,18 @@ cmake_minimum_required(VERSION 3.14)
 function(generateRootZeekTestTarget)
   if(NOT ZEEK_AGENT_ENABLE_TESTS)
     message(STATUS "zeek-agent: Tests are disabled")
+
+    add_custom_target(
+      zeek_agent_tests
+
+      COMMAND "${CMAKE_COMMAND}" -E echo "zeek-agent: Tests are disabled"
+      VERBATIM
+    )
+
   else()
     message(STATUS "zeek-agent: Tests are enabled")
+    add_custom_target(zeek_agent_tests)
   endif()
-
-  add_custom_target(zeek_agent_tests)
 endfunction()
 
 function(attachZeekTest target_name)
@@ -58,9 +65,17 @@ function(generateZeekAgentTest)
     message(FATAL_ERROR "Invalid call to generateTestTarget(). One or more arguments are missing")
   endif()
 
+  get_target_property(main_target_sources "${ARGS_SOURCE_TARGET}" SOURCES)
+  if("${main_target_sources}" STREQUAL "main_target_sources-NOTFOUND")
+    message(FATAL_ERROR "Failed to import the source list from the main target")
+  endif()
+
+  list(REMOVE_ITEM main_target_sources "src/main.cpp")
+
   add_executable(
     "${ARGS_SOURCE_TARGET}_tests"
     ${ARGS_SOURCES}
+    ${main_target_sources}
   )
 
   target_link_libraries("${ARGS_SOURCE_TARGET}_tests" PRIVATE
@@ -85,8 +100,6 @@ function(generateZeekAgentTest)
 
     COMPILE_OPTIONS
     INTERFACE_COMPILE_OPTIONS
-
-    SOURCES
   )
 
   foreach(property_name ${property_list})

@@ -17,7 +17,7 @@ SCENARIO("Basic VirtualTableModule operations", "[VirtualTableModule]") {
 
       THEN("a valid SQL statement is generated") {
         static const std::string kExpectedSQLStatement{
-            "CREATE TABLE TestTable (\n  string TEXT,\n  integer BIGINT\n)\n"};
+            "CREATE TABLE TestTable (\n  integer BIGINT,\n  string TEXT\n)\n"};
 
         REQUIRE(sql_statement == kExpectedSQLStatement);
       }

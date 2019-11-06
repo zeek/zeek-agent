@@ -10,7 +10,9 @@ class VirtualDatabase final : public IVirtualDatabase {
 public:
   virtual ~VirtualDatabase() override;
 
+  virtual std::vector<std::string> virtualTableList() const override;
   virtual Status registerTable(IVirtualTable::Ref table) override;
+  virtual Status unregisterTable(const std::string &name) override;
 
   virtual Status query(IVirtualTable::RowList &row_list,
                        const std::string &query) const override;

@@ -14,6 +14,7 @@ class AudispSocketReader final : public IAudispProducer {
 public:
   static Status create(IAudispProducer::Ref &obj,
                        const std::string &socket_path);
+
   virtual ~AudispSocketReader() override;
 
   virtual Status read(std::string &buffer) override;

@@ -11,13 +11,11 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
     REQUIRE(status.succeeded());
 
     WHEN("registering a new table plugin") {
-      {
-        IVirtualTable::Ref test_table(
-            new TestTable(TestTable::SchemaType::Valid));
+      IVirtualTable::Ref test_table(
+          new TestTable(TestTable::SchemaType::Valid));
 
-        status = virtual_database->registerTable(std::move(test_table));
-        REQUIRE(status.succeeded());
-      }
+      status = virtual_database->registerTable(test_table);
+      REQUIRE(status.succeeded());
 
       THEN("the new virtual table can be queried") {
         IVirtualTable::RowList row_list;
@@ -32,12 +30,10 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
     WHEN("registering the same table twice") {
       Status status;
 
-      {
-        IVirtualTable::Ref test_table(
-            new TestTable(TestTable::SchemaType::Valid));
+      IVirtualTable::Ref test_table(
+          new TestTable(TestTable::SchemaType::Valid));
 
-        status = virtual_database->registerTable(std::move(test_table));
-      }
+      status = virtual_database->registerTable(test_table);
 
       REQUIRE(status.succeeded());
 
@@ -45,7 +41,7 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
         IVirtualTable::Ref test_table(
             new TestTable(TestTable::SchemaType::Valid));
 
-        status = virtual_database->registerTable(std::move(test_table));
+        status = virtual_database->registerTable(test_table);
       }
 
       THEN("an error is returned") { REQUIRE(!status.succeeded()); }
@@ -54,12 +50,10 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
     WHEN("registering a table with an invalid schema") {
       Status status;
 
-      {
-        IVirtualTable::Ref test_table(
-            new TestTable(TestTable::SchemaType::Invalid));
+      IVirtualTable::Ref test_table(
+          new TestTable(TestTable::SchemaType::Invalid));
 
-        status = virtual_database->registerTable(std::move(test_table));
-      }
+      status = virtual_database->registerTable(test_table);
 
       THEN("an error is returned") { REQUIRE(!status.succeeded()); }
     }
@@ -70,8 +64,8 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
       // clang-format off
       row_list.push_back(
         {
-          { "dummy_value", { IVirtualTable::Value::ColumnType::String, "dummy_value" } },
-          { "dummy_value2", { IVirtualTable::Value::ColumnType::String, "dummy_value2" } }
+          { "dummy_value", "dummy_value" },
+          { "dummy_value2", "dummy_value2" }
         }
       );
       // clang-format on
@@ -88,40 +82,61 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
     WHEN("querying a table with multiple rows") {
       static const std::size_t kRowCount{100U};
 
-      {
-        IVirtualTable::Ref test_table(
-            new TestTable(TestTable::SchemaType::Valid, kRowCount));
+      IVirtualTable::Ref test_table(
+          new TestTable(TestTable::SchemaType::Valid, kRowCount));
 
-        auto status = virtual_database->registerTable(std::move(test_table));
-        REQUIRE(status.succeeded());
-      }
+      auto status = virtual_database->registerTable(test_table);
+      REQUIRE(status.succeeded());
 
       IVirtualTable::RowList row_list;
+      status = virtual_database->query(row_list, "SELECT * FROM TestTable;");
 
-      auto status =
-          virtual_database->query(row_list, "SELECT * FROM TestTable;");
-
-      THEN("the correct amount of rows is returned") {
+      THEN("the correct rows are returned") {
         REQUIRE(status.succeeded());
         REQUIRE(row_list.size() == kRowCount);
+
+        for (std::size_t i = 0U; i < row_list.size(); ++i) {
+          const auto &current_row = row_list.at(i);
+
+          auto integer_field_it = current_row.find("integer");
+          REQUIRE(integer_field_it != current_row.end());
+
+          auto string_field_it = current_row.find("string");
+          REQUIRE(string_field_it != current_row.end());
+
+          const auto &integer_optional = integer_field_it->second;
+          REQUIRE(integer_optional.has_value());
+
+          const auto &string_optional = string_field_it->second;
+          REQUIRE(string_optional.has_value());
+
+          const auto &integer_variant = integer_optional.value();
+          REQUIRE(integer_variant.index() == 0U);
+
+          const auto &string_variant = string_optional.value();
+          REQUIRE(string_variant.index() == 1U);
+
+          const auto &integer_value = std::get<0U>(integer_variant);
+          CHECK(integer_value == i);
+
+          const auto &string_value = std::get<1U>(string_variant);
+          CHECK(string_value == std::to_string(i));
+        }
       }
     }
 
     WHEN("querying an empty table") {
       static const std::size_t kRowCount{0U};
 
-      {
-        IVirtualTable::Ref test_table(
-            new TestTable(TestTable::SchemaType::Valid, kRowCount));
+      IVirtualTable::Ref test_table(
+          new TestTable(TestTable::SchemaType::Valid, kRowCount));
 
-        auto status = virtual_database->registerTable(std::move(test_table));
-        REQUIRE(status.succeeded());
-      }
+      auto status = virtual_database->registerTable(test_table);
+      REQUIRE(status.succeeded());
 
       IVirtualTable::RowList row_list;
 
-      auto status =
-          virtual_database->query(row_list, "SELECT * FROM TestTable;");
+      status = virtual_database->query(row_list, "SELECT * FROM TestTable;");
 
       THEN("no rows are returned") {
         REQUIRE(status.succeeded());

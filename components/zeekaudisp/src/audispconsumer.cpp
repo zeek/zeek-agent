@@ -1,5 +1,6 @@
 #include "audispconsumer.h"
 #include "audispsocketreader.h"
+#include "audit_utils.h"
 #include "auparseinterface.h"
 
 #include <atomic>
@@ -58,8 +59,6 @@ Status AudispConsumer::processEvents() {
 Status AudispConsumer::getEvents(AuditEventList &event_list) {
   event_list = {};
 
-  d->auparse_interface->flushFeed();
-
   {
     std::lock_guard<std::mutex> lock(d->processed_event_list_mutex);
 
@@ -71,7 +70,9 @@ Status AudispConsumer::getEvents(AuditEventList &event_list) {
   if (d->parser_error) {
     status =
         Status::failure("One or more events could not be parsed correctly");
+
     d->parser_error = false;
+
   } else {
     status = Status::success();
   }
@@ -225,6 +226,7 @@ Status IAudispConsumer::create(Ref &obj,
     IAudispProducer::Ref audisp_producer;
     auto status =
         AudispSocketReader::create(audisp_producer, audisp_socket_path);
+
     if (!status.succeeded()) {
       return status;
     }
@@ -292,15 +294,35 @@ AudispConsumer::parseSyscallRecord(std::optional<SyscallRecordData> &data,
     } else if (std::strcmp(field_name, "ppid") == 0) {
       output.parent_process_id = std::strtoll(field_value, nullptr, 10);
       ++field_count;
+
+    } else if (std::strcmp(field_name, "auid") == 0) {
+      output.auid = std::strtoll(field_value, nullptr, 10);
+      ++field_count;
+
+    } else if (std::strcmp(field_name, "uid") == 0) {
+      output.uid = std::strtoll(field_value, nullptr, 10);
+      ++field_count;
+
+    } else if (std::strcmp(field_name, "euid") == 0) {
+      output.euid = std::strtoll(field_value, nullptr, 10);
+      ++field_count;
+
+    } else if (std::strcmp(field_name, "gid") == 0) {
+      output.gid = std::strtoll(field_value, nullptr, 10);
+      ++field_count;
+
+    } else if (std::strcmp(field_name, "egid") == 0) {
+      output.egid = std::strtoll(field_value, nullptr, 10);
+      ++field_count;
     }
 
-    if (field_count == 5U) {
+    if (field_count == 10U) {
       break;
     }
 
   } while (auparse->nextField() > 0);
 
-  if (field_count != 5U) {
+  if (field_count != 10U) {
     return Status::failure("One or more fields are missing");
   }
 
@@ -376,7 +398,7 @@ Status AudispConsumer::processExecveRecords(ExecveRecordData &data,
 
   for (auto &p : raw_data.argument_list) {
     const auto &field_name = p.first;
-    auto &field_value = p.second;
+    const auto &field_value = p.second;
 
     if (field_name.find('[') != std::string::npos) {
       continue;
@@ -386,7 +408,12 @@ Status AudispConsumer::processExecveRecords(ExecveRecordData &data,
       continue;
     }
 
-    output.argument_list.push_back(std::move(field_value));
+    std::string value;
+    if (!convertAuditString(value, field_value)) {
+      value = field_value;
+    }
+
+    output.argument_list.push_back(std::move(value));
   }
 
   raw_data = {};
@@ -406,7 +433,10 @@ Status AudispConsumer::parseCwdRecord(std::string &data,
     auto field_value = auparse->getFieldStr();
 
     if (std::strcmp(field_name, "cwd") == 0) {
-      data = field_value;
+      if (!convertAuditString(data, field_value)) {
+        data = field_value;
+      }
+
       break;
     }
   } while (auparse->nextField() > 0);
@@ -424,8 +454,11 @@ Status AudispConsumer::parsePathRecord(PathRecordData &data,
   auparse->firstField();
 
   std::string path_value;
-  bool first_record{false};
+  std::int64_t mode{0};
+  std::int64_t ouid{0};
+  std::int64_t ogid{0};
 
+  bool first_record{false};
   std::size_t parsed_field_count{0U};
 
   do {
@@ -433,7 +466,10 @@ Status AudispConsumer::parsePathRecord(PathRecordData &data,
     auto field_value = auparse->getFieldStr();
 
     if (std::strcmp(field_name, "name") == 0) {
-      path_value = field_value;
+      if (!convertAuditString(path_value, field_value)) {
+        path_value = field_value;
+      }
+
       ++parsed_field_count;
 
     } else if (std::strcmp(field_name, "item") == 0) {
@@ -442,15 +478,26 @@ Status AudispConsumer::parsePathRecord(PathRecordData &data,
       }
 
       ++parsed_field_count;
+
+    } else if (std::strcmp(field_name, "mode") == 0) {
+      mode = std::strtoll(field_value, nullptr, 8);
+      ++parsed_field_count;
+
+    } else if (std::strcmp(field_name, "ouid") == 0) {
+      ouid = std::strtoll(field_value, nullptr, 10);
+      ++parsed_field_count;
+
+    } else if (std::strcmp(field_name, "ogid") == 0) {
+      ogid = std::strtoll(field_value, nullptr, 10);
+      ++parsed_field_count;
     }
 
-    if (parsed_field_count == 2U) {
+    if (parsed_field_count == 5U) {
       break;
     }
-
   } while (auparse->nextField() > 0);
 
-  if (parsed_field_count != 2U) {
+  if (parsed_field_count != 5U) {
     return Status::failure(
         "One or more fields are missing from the AUDIT_PATH record");
   }
@@ -459,7 +506,7 @@ Status AudispConsumer::parsePathRecord(PathRecordData &data,
     data = {};
   }
 
-  data.push_back(std::move(path_value));
+  data.push_back({path_value, mode, ouid, ogid});
   return Status::success();
 }
 } // namespace zeek

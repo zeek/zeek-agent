@@ -26,12 +26,7 @@ Status MockedAudispProducer::create(IAudispProducer::Ref &obj,
 MockedAudispProducer::~MockedAudispProducer() {}
 
 Status MockedAudispProducer::read(std::string &buffer) {
-  if (d->event_buffer.empty()) {
-    throw std::runtime_error("Reading past the end of the buffer");
-  }
-
-  buffer = std::move(d->event_buffer);
-  d->event_buffer = {};
+  buffer = d->event_buffer;
 
   return Status::success();
 }

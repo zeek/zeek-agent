@@ -20,15 +20,15 @@ public:
   virtual const Schema &schema() const override {
     // clang-format off
     static const Schema kValidTableSchema = {
-      { "integer", IVirtualTable::Value::ColumnType::Integer },
-      { "string", IVirtualTable::Value::ColumnType::String }
+      { "integer", IVirtualTable::ColumnType::Integer },
+      { "string", IVirtualTable::ColumnType::String }
     };
     // clang-format on
 
     // clang-format off
     static const Schema kInvalidTableSchema = {
-      { "integer", static_cast<IVirtualTable::Value::ColumnType>(100) },
-      { "string", static_cast<IVirtualTable::Value::ColumnType>(200) }
+      { "integer", static_cast<IVirtualTable::ColumnType>(100) },
+      { "string", static_cast<IVirtualTable::ColumnType>(200) }
     };
     // clang-format on
 
@@ -39,20 +39,10 @@ public:
   virtual Status generateRowList(RowList &row_list) override {
     row_list = {};
 
-    auto integer_column_type =
-        (schema_type == SchemaType::Valid)
-            ? IVirtualTable::Value::ColumnType::Integer
-            : static_cast<IVirtualTable::Value::ColumnType>(100);
-
-    auto string_column_type =
-        (schema_type == SchemaType::Valid)
-            ? IVirtualTable::Value::ColumnType::String
-            : static_cast<IVirtualTable::Value::ColumnType>(200);
-
     for (auto i = 0U; i < row_count; ++i) {
       Row row = {};
-      row.insert({"integer", {integer_column_type, i}});
-      row.insert({"string", {string_column_type, std::to_string(i)}});
+      row.insert({"integer", i});
+      row.insert({"string", std::to_string(i)});
       row_list.push_back(row);
     }
 

@@ -28,7 +28,7 @@ public:
   static const struct sqlite3_module *sqliteModule();
 
   static Status generateSQLTableDefinition(std::string &sql_statement,
-                                           const IVirtualTable::Ref &table);
+                                           IVirtualTable::Ref table);
 
   static int onTableClose(sqlite3_vtab_cursor *cursor);
   static int onTableEof(sqlite3_vtab_cursor *cursor);

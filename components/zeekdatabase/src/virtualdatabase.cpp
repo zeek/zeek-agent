@@ -20,6 +20,17 @@ VirtualDatabase::~VirtualDatabase() {
   d->sqlite_database = nullptr;
 }
 
+std::vector<std::string> VirtualDatabase::virtualTableList() const {
+  std::vector<std::string> virtual_table_list;
+
+  for (const auto &p : d->registered_module_list) {
+    const auto &name = p.first;
+    virtual_table_list.push_back(name);
+  }
+
+  return virtual_table_list;
+}
+
 Status VirtualDatabase::registerTable(IVirtualTable::Ref table) {
   if (d->registered_module_list.count(table->name()) != 0U) {
     return Status::failure("A table with the same is already registered");
@@ -31,7 +42,7 @@ Status VirtualDatabase::registerTable(IVirtualTable::Ref table) {
   }
 
   VirtualTableModule::Ref virtual_table_module;
-  status = VirtualTableModule::create(virtual_table_module, std::move(table));
+  status = VirtualTableModule::create(virtual_table_module, table);
 
   if (!status.succeeded()) {
     return status;
@@ -54,6 +65,38 @@ Status VirtualDatabase::registerTable(IVirtualTable::Ref table) {
   d->registered_module_list.insert(
       {table_name, std::move(virtual_table_module)});
 
+  return Status::success();
+}
+
+Status VirtualDatabase::unregisterTable(const std::string &name) {
+  auto table_it = d->registered_module_list.find(name);
+  if (table_it == d->registered_module_list.end()) {
+    return Status::failure("The specified table does not exists");
+  }
+
+  std::vector<std::string> module_list;
+  std::vector<const char *> string_pointer_list;
+
+  for (const auto &p : d->registered_module_list) {
+    const auto &module_name = p.first;
+
+    if (name == module_name) {
+      continue;
+    }
+
+    module_list.push_back(module_name);
+
+    const auto &last_element = module_list.back();
+    string_pointer_list.push_back(last_element.c_str());
+  }
+
+  string_pointer_list.push_back(nullptr);
+  if (sqlite3_drop_modules(d->sqlite_database, string_pointer_list.data()) !=
+      SQLITE_OK) {
+    return Status::failure("Failed to unregister the table");
+  }
+
+  d->registered_module_list.erase(table_it);
   return Status::success();
 }
 
@@ -80,24 +123,23 @@ Status VirtualDatabase::query(IVirtualTable::RowList &row_list,
     for (int column_index = 0; column_index < column_count; ++column_index) {
       auto sqlite_type = sqlite3_column_type(sql_stmt.get(), column_index);
 
-      IVirtualTable::Value value = {};
+      IVirtualTable::OptionalVariant value = {};
 
       switch (sqlite_type) {
-      case SQLITE_INTEGER:
-        value.type = IVirtualTable::Value::ColumnType::Integer;
+      case SQLITE_NULL:
+        break;
 
-        value.data = static_cast<std::int64_t>(
+      case SQLITE_INTEGER:
+        value = static_cast<std::int64_t>(
             sqlite3_column_int(sql_stmt.get(), column_index));
 
         break;
 
       case SQLITE_TEXT: {
-        value.type = IVirtualTable::Value::ColumnType::String;
-
         auto string_data = reinterpret_cast<const char *>(
             sqlite3_column_text(sql_stmt.get(), column_index));
 
-        value.data = string_data;
+        value = std::string(string_data);
 
         break;
       }
@@ -131,9 +173,8 @@ Status VirtualDatabase::validateTableName(const std::string &name) {
 
 Status
 VirtualDatabase::validateTableSchema(const IVirtualTable::Schema &schema) {
-  static const std::unordered_set<IVirtualTable::Value::ColumnType>
-      kValidColumnTypes = {IVirtualTable::Value::ColumnType::Integer,
-                           IVirtualTable::Value::ColumnType::String};
+  static const std::unordered_set<IVirtualTable::ColumnType> kValidColumnTypes =
+      {IVirtualTable::ColumnType::Integer, IVirtualTable::ColumnType::String};
 
   for (const auto &p : schema) {
     const auto &column_name = p.first;

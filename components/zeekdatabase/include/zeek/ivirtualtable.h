@@ -1,8 +1,9 @@
 #pragma once
 
+#include <map>
 #include <memory>
+#include <optional>
 #include <string>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
@@ -11,19 +12,16 @@
 namespace zeek {
 class IVirtualTable {
 public:
-  using Ref = std::unique_ptr<IVirtualTable>;
+  using Ref = std::shared_ptr<IVirtualTable>;
 
-  struct Value final {
-    enum class ColumnType { Integer, String };
+  using Variant = std::variant<std::int64_t, std::string>;
+  using OptionalVariant = std::optional<Variant>;
 
-    ColumnType type;
-    std::variant<std::int64_t, std::string> data;
-  };
-
-  using Row = std::unordered_map<std::string, Value>;
+  using Row = std::map<std::string, OptionalVariant>;
   using RowList = std::vector<Row>;
 
-  using Schema = std::unordered_map<std::string, Value::ColumnType>;
+  enum class ColumnType { Integer, String };
+  using Schema = std::map<std::string, ColumnType>;
 
   virtual ~IVirtualTable() = default;
   IVirtualTable() = default;

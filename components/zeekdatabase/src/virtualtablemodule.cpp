@@ -1,6 +1,8 @@
 #include "virtualtablemodule.h"
 #include "sqlite_utils.h"
 
+#include <cassert>
+#include <iostream>
 #include <sstream>
 #include <type_traits>
 
@@ -19,6 +21,7 @@ struct VirtualTableCursor final {
 struct VirtualTableInstance final {
   struct sqlite3_vtab base_vtab;
   VirtualTableModule *module_instance;
+  std::size_t column_count{0U};
 };
 
 // clang-format off
@@ -44,6 +47,40 @@ int xBestIndexCallback(sqlite3_vtab *, sqlite3_index_info *) {
 }
 
 int xDisconnectCallback(sqlite3_vtab *) { return SQLITE_OK; }
+
+// clang-format off
+static const struct sqlite3_module kSqliteModule = {
+  // Version
+  3,
+
+  // Mandatory callbacks; enough to get read-only tables
+  &VirtualTableModule::onTableCreate,
+  &VirtualTableModule::onTableCreate,
+  xBestIndexCallback,
+  xDisconnectCallback,
+  xDisconnectCallback,
+  &VirtualTableModule::onTableOpen,
+  &VirtualTableModule::onTableClose,
+  &VirtualTableModule::onTableFilter,
+  &VirtualTableModule::onTableNext,
+  &VirtualTableModule::onTableEof,
+  &VirtualTableModule::onTableColumn,
+  &VirtualTableModule::onTableRowid,
+
+  // Unused callbacks
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr,
+  nullptr
+};
+// clang-format on
 } // namespace
 
 struct VirtualTableModule::PrivateData final {
@@ -55,7 +92,7 @@ Status VirtualTableModule::create(Ref &obj, IVirtualTable::Ref table) {
   obj.reset();
 
   try {
-    auto ptr = new VirtualTableModule(std::move(table));
+    auto ptr = new VirtualTableModule(table);
     table = {};
 
     obj.reset(ptr);
@@ -74,40 +111,6 @@ VirtualTableModule::~VirtualTableModule() {}
 const std::string &VirtualTableModule::name() const { return d->table->name(); }
 
 const struct sqlite3_module *VirtualTableModule::sqliteModule() {
-  // clang-format off
-  static const struct sqlite3_module kSqliteModule = {
-    // Version
-    3,
-
-    // Mandatory callbacks; enough to get read-only tables
-    &VirtualTableModule::onTableCreate,
-    &VirtualTableModule::onTableCreate,
-    xBestIndexCallback,
-    xDisconnectCallback,
-    xDisconnectCallback,
-    &VirtualTableModule::onTableOpen,
-    &VirtualTableModule::onTableClose,
-    &VirtualTableModule::onTableFilter,
-    &VirtualTableModule::onTableNext,
-    &VirtualTableModule::onTableEof,
-    &VirtualTableModule::onTableColumn,
-    &VirtualTableModule::onTableRowid,
-
-    // Unused callbacks
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr,
-    nullptr
-  };
-  // clang-format on
-
   return &kSqliteModule;
 }
 
@@ -172,6 +175,15 @@ int VirtualTableModule::onTableOpen(sqlite3_vtab *table_instance,
       return SQLITE_ERROR;
     }
 
+    auto &instance = *reinterpret_cast<VirtualTableInstance *>(table_instance);
+
+    for (const auto &row : cursor_impl.session->row_list) {
+      if (row.size() != instance.column_count) {
+        std::cerr << "Invalid column count returned by table implementation\n";
+        return SQLITE_ERROR;
+      }
+    }
+
     // Return the cursor to sqlite
     *cursor = reinterpret_cast<sqlite3_vtab_cursor *>(cursor_memory.release());
     return SQLITE_OK;
@@ -221,26 +233,38 @@ int VirtualTableModule::onTableNext(sqlite3_vtab_cursor *cursor) {
 int VirtualTableModule::onTableColumn(sqlite3_vtab_cursor *cursor,
                                       sqlite3_context *context, int i) {
 
+  auto &instance = *reinterpret_cast<VirtualTableInstance *>(cursor->pVtab);
+  if (static_cast<std::size_t>(i) >= instance.column_count) {
+    std::cerr << "Invalid column index\n";
+    return SQLITE_ERROR;
+  }
+
   auto &cursor_impl = *reinterpret_cast<VirtualTableCursor *>(cursor);
   auto &session = *cursor_impl.session;
 
   auto &current_row = session.row_list.at(session.current_row);
-
   auto current_column_it = std::next(current_row.begin(), i);
+
   auto &current_column = *current_column_it;
 
   auto &current_column_value = current_column.second;
+  if (!current_column_value.has_value()) {
+    sqlite3_result_null(context);
+    return SQLITE_OK;
+  }
 
-  switch (current_column_value.type) {
-  case IVirtualTable::Value::ColumnType::Integer: {
-    const auto &current_column_data = std::get<0>(current_column_value.data);
+  const auto &current_column_value_data = current_column_value.value();
+
+  switch (current_column_value_data.index()) {
+  case 0U: {
+    const auto &current_column_data = std::get<0>(current_column_value_data);
     sqlite3_result_int(context, current_column_data);
 
     break;
   }
 
-  case IVirtualTable::Value::ColumnType::String: {
-    const auto &current_column_data = std::get<1>(current_column_value.data);
+  case 1U: {
+    const auto &current_column_data = std::get<1>(current_column_value_data);
 
     sqlite3_result_text(context, current_column_data.c_str(),
                         current_column_data.size(), SQLITE_STATIC);
@@ -269,8 +293,9 @@ int VirtualTableModule::onTableRowid(sqlite3_vtab_cursor *cursor,
   return SQLITE_OK;
 }
 
-Status VirtualTableModule::generateSQLTableDefinition(
-    std::string &sql_statement, const IVirtualTable::Ref &table) {
+Status
+VirtualTableModule::generateSQLTableDefinition(std::string &sql_statement,
+                                               IVirtualTable::Ref table) {
 
   sql_statement = {};
 
@@ -287,11 +312,11 @@ Status VirtualTableModule::generateSQLTableDefinition(
     const char *column_type_as_string = nullptr;
 
     switch (column_type) {
-    case IVirtualTable::Value::ColumnType::Integer:
+    case IVirtualTable::ColumnType::Integer:
       column_type_as_string = "BIGINT";
       break;
 
-    case IVirtualTable::Value::ColumnType::String:
+    case IVirtualTable::ColumnType::String:
       column_type_as_string = "TEXT";
       break;
 
@@ -321,7 +346,8 @@ Status VirtualTableModule::generateSQLTableDefinition(
 VirtualTableModule::VirtualTableModule(IVirtualTable::Ref table)
     : d(new PrivateData) {
 
-  d->table = std::move(table);
+  d->table = table;
   d->table_instance.module_instance = this;
+  d->table_instance.column_count = table->schema().size();
 }
 } // namespace zeek

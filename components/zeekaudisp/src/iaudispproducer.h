@@ -9,7 +9,7 @@
 namespace zeek {
 class IAudispProducer {
 public:
-  using Ref = std::shared_ptr<IAudispProducer>;
+  using Ref = std::unique_ptr<IAudispProducer>;
 
   IAudispProducer() = default;
   virtual ~IAudispProducer() = default;
