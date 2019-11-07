@@ -16,10 +16,10 @@ include(cmake/options.cmake)
 
 function(osqueryZeekMain)
 
-  #if(NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-  #  message(WARNING "osquery-zeek: Unsupported platform")
-  #  return()
-  #endif()
+  if(NOT "${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+    message(WARNING "osquery-zeek: Unsupported platform")
+    return()
+  endif()
 
   generateZeekSettingsTarget()
   geneateZeekTestsTarget()
