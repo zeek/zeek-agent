@@ -1,4 +1,13 @@
+dist: bionic
 language: cpp
+sudo: required
+
+cache:
+  directories:
+    build/ccache
+
+script:
+  ./scripts/ci_entry_point.sh
 
 branches:
   only:

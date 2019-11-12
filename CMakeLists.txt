@@ -5,6 +5,7 @@ include("cmake/flags.cmake")
 include("cmake/options.cmake")
 include("cmake/utils.cmake")
 include("cmake/tests.cmake")
+include("cmake/ccache.cmake")
 
 function(zeekAgent)
   generateSettingsTarget()
@@ -26,4 +27,5 @@ function(zeekAgent)
   )
 endfunction()
 
+configureCcache()
 zeekAgent()
