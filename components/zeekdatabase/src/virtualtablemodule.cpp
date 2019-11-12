@@ -46,8 +46,6 @@ int xBestIndexCallback(sqlite3_vtab *, sqlite3_index_info *) {
   return SQLITE_OK;
 }
 
-int xDisconnectCallback(sqlite3_vtab *) { return SQLITE_OK; }
-
 // clang-format off
 static const struct sqlite3_module kSqliteModule = {
   // Version
@@ -57,8 +55,8 @@ static const struct sqlite3_module kSqliteModule = {
   &VirtualTableModule::onTableCreate,
   &VirtualTableModule::onTableCreate,
   xBestIndexCallback,
-  xDisconnectCallback,
-  xDisconnectCallback,
+  &VirtualTableModule::onTableDisconnect,
+  &VirtualTableModule::onTableDisconnect,
   &VirtualTableModule::onTableOpen,
   &VirtualTableModule::onTableClose,
   &VirtualTableModule::onTableFilter,
@@ -85,7 +83,7 @@ static const struct sqlite3_module kSqliteModule = {
 
 struct VirtualTableModule::PrivateData final {
   IVirtualTable::Ref table;
-  VirtualTableInstance table_instance;
+  VirtualTableInstance *table_instance{nullptr};
 };
 
 Status VirtualTableModule::create(Ref &obj, IVirtualTable::Ref table) {
@@ -124,7 +122,18 @@ int VirtualTableModule::onTableCreate(sqlite3 *sqlite_database,
       *reinterpret_cast<VirtualTableModule *>(virtual_table_module_ptr);
 
   auto &instance_data = *instance.d.get();
-  *table_instance = &instance_data.table_instance.base_vtab;
+
+  try {
+    instance_data.table_instance = new VirtualTableInstance();
+    instance_data.table_instance->module_instance = &instance;
+    instance_data.table_instance->column_count =
+        instance_data.table->schema().size();
+
+    *table_instance = &instance_data.table_instance->base_vtab;
+
+  } catch (const std::bad_alloc &) {
+    return SQLITE_NOMEM;
+  }
 
   // Generate the CREATE TABLE statement and declare the virtual table
   // within sqlite
@@ -191,6 +200,15 @@ int VirtualTableModule::onTableOpen(sqlite3_vtab *table_instance,
   } catch (const std::bad_alloc &) {
     return SQLITE_NOMEM;
   }
+}
+
+int VirtualTableModule::onTableDisconnect(sqlite3_vtab *table_instance) {
+  if (table_instance != nullptr) {
+    auto instance = reinterpret_cast<VirtualTableInstance *>(table_instance);
+    delete instance;
+  }
+
+  return SQLITE_OK;
 }
 
 int VirtualTableModule::onTableClose(sqlite3_vtab_cursor *cursor) {
@@ -347,7 +365,5 @@ VirtualTableModule::VirtualTableModule(IVirtualTable::Ref table)
     : d(new PrivateData) {
 
   d->table = table;
-  d->table_instance.module_instance = this;
-  d->table_instance.column_count = table->schema().size();
 }
 } // namespace zeek

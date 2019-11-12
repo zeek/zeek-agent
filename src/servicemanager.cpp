@@ -94,7 +94,6 @@ void ServiceManager::stopServices() {
 
   for (auto &p : d->service_list) {
     const auto &service_name = p.first;
-
     auto &service_instance = p.second;
 
     auto status = service_instance.status.get();

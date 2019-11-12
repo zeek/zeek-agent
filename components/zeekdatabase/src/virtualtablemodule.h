@@ -39,6 +39,8 @@ public:
   static int onTableOpen(sqlite3_vtab *table_instance,
                          sqlite3_vtab_cursor **cursor);
 
+  static int onTableDisconnect(sqlite3_vtab *table_instance);
+
   static int onTableRowid(sqlite3_vtab_cursor *cursor, sqlite3_int64 *rowid);
 
   static int onTableCreate(sqlite3 *sqlite_database,

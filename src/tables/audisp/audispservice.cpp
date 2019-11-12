@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 
 #include <zeek/iaudispconsumer.h>
 
@@ -57,8 +58,15 @@ Status AudispService::exec(std::atomic_bool &terminate) {
       continue;
     }
 
-    process_events_table_impl.processEvents(event_list);
-    socket_events_table_impl.processEvents(event_list);
+    status = process_events_table_impl.processEvents(event_list);
+    if (!status.succeeded()) {
+      std::cerr << status.message() << "\n";
+    }
+
+    status = socket_events_table_impl.processEvents(event_list);
+    if (!status.succeeded()) {
+      std::cerr << status.message() << "\n";
+    }
   }
 
   return Status::success();
@@ -66,6 +74,7 @@ Status AudispService::exec(std::atomic_bool &terminate) {
 
 AudispService::AudispService(IVirtualDatabase &virtual_database)
     : d(new PrivateData(virtual_database)) {
+
   auto status =
       zeek::IAudispConsumer::create(d->audisp_consumer, kAudispSocketPath);
 
