@@ -5,13 +5,83 @@
 
 #include <atomic>
 #include <cstring>
+#include <iomanip>
 #include <mutex>
+#include <sstream>
 #include <unordered_map>
 
 #include <asm/unistd.h>
 #include <libaudit.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 
 namespace zeek {
+namespace {
+// clang-format off
+const std::unordered_map<int, std::string> kAddressFamilyName = {
+  { AF_UNSPEC, "AF_UNSPEC" },
+  { AF_LOCAL, "AF_LOCAL" },
+  { AF_UNIX, "AF_UNIX" },
+  { AF_FILE, "AF_FILE" },
+  { AF_INET, "AF_INET" },
+  { AF_AX25, "AF_AX25" },
+  { AF_IPX, "AF_IPX" },
+  { AF_APPLETALK, "AF_APPLETALK" },
+  { AF_NETROM, "AF_NETROM" },
+  { AF_BRIDGE, "AF_BRIDGE" },
+  { AF_ATMPVC, "AF_ATMPVC" },
+  { AF_X25, "AF_X25" },
+  { AF_INET6, "AF_INET6" },
+  { AF_ROSE, "AF_ROSE" },
+  { AF_DECnet, "AF_DECnet" },
+  { AF_NETBEUI, "AF_NETBEUI" },
+  { AF_SECURITY, "AF_SECURITY" },
+  { AF_KEY, "AF_KEY" },
+  { AF_NETLINK, "AF_NETLINK" },
+  { AF_ROUTE, "AF_ROUTE" },
+  { AF_PACKET, "AF_PACKET" },
+  { AF_ASH, "AF_ASH" },
+  { AF_ECONET, "AF_ECONET" },
+  { AF_ATMSVC, "AF_ATMSVC" },
+  { AF_RDS, "AF_RDS" },
+  { AF_SNA, "AF_SNA" },
+  { AF_IRDA, "AF_IRDA" },
+  { AF_PPPOX, "AF_PPPOX" },
+  { AF_WANPIPE, "AF_WANPIPE" },
+  { AF_LLC, "AF_LLC" },
+  { AF_IB, "AF_IB" },
+  { AF_MPLS, "AF_MPLS" },
+  { AF_CAN, "AF_CAN" },
+  { AF_TIPC, "AF_TIPC" },
+  { AF_BLUETOOTH, "AF_BLUETOOTH" },
+  { AF_IUCV, "AF_IUCV" },
+  { AF_RXRPC, "AF_RXRPC" },
+  { AF_ISDN, "AF_ISDN" },
+  { AF_PHONET, "AF_PHONET" },
+  { AF_IEEE802154, "AF_IEEE802154" },
+  { AF_CAIF, "AF_CAIF" },
+  { AF_ALG, "AF_ALG" },
+  { AF_NFC, "AF_NFC" },
+  { AF_VSOCK, "AF_VSOCK" },
+  { AF_KCM, "AF_KCM" },
+  { AF_QIPCRTR, "AF_QIPCRTR" },
+  { AF_SMC, "AF_SMC" },
+  { AF_MAX, "AF_MAX" }
+};
+// clang-format on
+
+std::string getAddressFamilyName(int family) {
+  auto it = kAddressFamilyName.find(family);
+  if (it == kAddressFamilyName.end()) {
+    return std::string();
+  }
+
+  return it->second;
+}
+} // namespace
+
 struct AudispConsumer::PrivateData final {
   IAudispProducer::Ref audisp_producer;
   IAuparseInterface::Ref auparse_interface;
@@ -128,8 +198,10 @@ void AudispConsumer::auparseCallback(auparse_cb_event_t event_type) {
   audit_event.syscall_data = std::move(syscall_data.value());
   syscall_data = {};
 
+  bool is_execve_syscall{false};
   IAudispConsumer::RawExecveRecordData raw_execve_data;
   IAudispConsumer::PathRecordData path_data;
+  IAudispConsumer::SockaddrRecordData sockaddr_data;
   std::string cwd_data;
 
   while (d->auparse_interface->nextRecord() > 0) {
@@ -139,14 +211,27 @@ void AudispConsumer::auparseCallback(auparse_cb_event_t event_type) {
     switch (record_type) {
     case AUDIT_EXECVE:
       status = parseRawExecveRecord(raw_execve_data, d->auparse_interface);
+      is_execve_syscall = true;
       break;
 
     case AUDIT_CWD:
       status = parseCwdRecord(cwd_data, d->auparse_interface);
+
+      audit_event.cwd_data = std::move(cwd_data);
+      cwd_data = {};
+
       break;
 
     case AUDIT_PATH:
       status = parsePathRecord(path_data, d->auparse_interface);
+      break;
+
+    case AUDIT_SOCKADDR:
+      status = parseSockaddrRecord(sockaddr_data, d->auparse_interface);
+
+      audit_event.sockaddr_data = std::move(sockaddr_data);
+      sockaddr_data = {};
+
       break;
 
     default:
@@ -160,26 +245,7 @@ void AudispConsumer::auparseCallback(auparse_cb_event_t event_type) {
     }
   }
 
-  bool process_execve_records{false};
-
-  switch (audit_event.syscall_data.type) {
-  case IAudispConsumer::SyscallRecordData::Type::Execve:
-  case IAudispConsumer::SyscallRecordData::Type::ExecveAt:
-    process_execve_records = true;
-    break;
-
-  case IAudispConsumer::SyscallRecordData::Type::Fork:
-  case IAudispConsumer::SyscallRecordData::Type::VFork:
-  case IAudispConsumer::SyscallRecordData::Type::Clone:
-    process_execve_records = false;
-    break;
-
-  default:
-    d->parser_error = true;
-    return;
-  }
-
-  if (process_execve_records) {
+  if (is_execve_syscall) {
     if (raw_execve_data.argument_list.empty()) {
       d->parser_error = true;
       return;
@@ -200,16 +266,8 @@ void AudispConsumer::auparseCallback(auparse_cb_event_t event_type) {
     audit_event.execve_data = std::move(execve_data);
     execve_data = {};
 
-    if (path_data.empty()) {
-      d->parser_error = true;
-      return;
-    }
-
     audit_event.path_data = std::move(path_data);
     path_data = {};
-
-    audit_event.cwd_data = std::move(cwd_data);
-    cwd_data = {};
   }
 
   {
@@ -251,6 +309,8 @@ AudispConsumer::parseSyscallRecord(std::optional<SyscallRecordData> &data,
     { __NR_fork, SyscallRecordData::Type::Fork },
     { __NR_vfork, SyscallRecordData::Type::VFork },
     { __NR_clone, SyscallRecordData::Type::Clone },
+    { __NR_bind, SyscallRecordData::Type::Bind },
+    { __NR_connect, SyscallRecordData::Type::Connect },
   };
   // clang-format on
 
@@ -314,15 +374,26 @@ AudispConsumer::parseSyscallRecord(std::optional<SyscallRecordData> &data,
     } else if (std::strcmp(field_name, "egid") == 0) {
       output.egid = std::strtoll(field_value, nullptr, 10);
       ++field_count;
+
+    } else if (std::strcmp(field_name, "exe") == 0) {
+      if (!convertAuditString(output.exe, field_value)) {
+        output.exe = field_value;
+      }
+
+      ++field_count;
+
+    } else if (std::strcmp(field_name, "a0") == 0) {
+      output.a0 = field_value;
+      ++field_count;
     }
 
-    if (field_count == 10U) {
+    if (field_count == 12U) {
       break;
     }
 
   } while (auparse->nextField() > 0);
 
-  if (field_count != 10U) {
+  if (field_count != 12U) {
     return Status::failure("One or more fields are missing");
   }
 
@@ -507,6 +578,104 @@ Status AudispConsumer::parsePathRecord(PathRecordData &data,
   }
 
   data.push_back({path_value, mode, ouid, ogid});
+  return Status::success();
+}
+
+Status AudispConsumer::parseSockaddrRecord(SockaddrRecordData &data,
+                                           IAuparseInterface::Ref auparse) {
+  data = {};
+
+  auparse->firstField();
+
+  std::string hex_encoded_address;
+
+  do {
+    auto field_name = auparse->getFieldName();
+    auto field_value = auparse->getFieldStr();
+
+    if (std::strcmp(field_name, "saddr") == 0) {
+      hex_encoded_address = field_value;
+      break;
+    }
+  } while (auparse->nextField() > 0);
+
+  if (hex_encoded_address.empty()) {
+    return Status::failure(
+        "One or more fields are missing from the AUDIT_SOCKADDR record");
+  }
+
+  std::string buffer;
+  if (!convertHexString(buffer, hex_encoded_address)) {
+    return Status::failure(
+        "Failed to parse the hex encoded sockaddr structure");
+  }
+
+  SockaddrRecordData output;
+
+  switch (buffer.size()) {
+  case sizeof(struct sockaddr_in): {
+    struct sockaddr_in addr {};
+    std::memcpy(&addr, buffer.data(), sizeof(addr));
+
+    output.family = getAddressFamilyName(addr.sin_family);
+    output.port = static_cast<std::int64_t>(htons(addr.sin_port));
+
+    auto numeric_address = htonl(addr.sin_addr.s_addr);
+
+    std::uint8_t numeric_address_bytes[4];
+    std::memcpy(numeric_address_bytes, &numeric_address,
+                sizeof(numeric_address));
+
+    for (std::size_t i = 0U; i < 4U; ++i) {
+      output.address += std::to_string(numeric_address_bytes[i]);
+
+      if (i < 3) {
+        output.address.push_back('.');
+      }
+    }
+
+    break;
+  }
+
+  case sizeof(struct sockaddr_in6): {
+    struct sockaddr_in6 addr {};
+    std::memcpy(&addr, buffer.data(), sizeof(addr));
+
+    output.family = getAddressFamilyName(addr.sin6_family);
+    output.port = static_cast<std::int64_t>(htons(addr.sin6_port));
+
+    std::stringstream str_stream;
+    for (std::size_t i = 0U; i < 16U; ++i) {
+      str_stream << std::hex << std::setw(2) << std::setfill('0')
+                 << static_cast<int>(addr.sin6_addr.s6_addr[i]);
+
+      if (i < 15U) {
+        str_stream << ":";
+      }
+    }
+
+    output.address = str_stream.str();
+    break;
+  }
+
+  case sizeof(struct sockaddr_un): {
+    struct sockaddr_un addr {};
+    std::memcpy(&addr, buffer.data(), sizeof(addr));
+
+    output.family = getAddressFamilyName(addr.sun_family);
+    output.address = addr.sun_path;
+
+    break;
+  }
+
+  default: {
+    auto saddr_field_size = buffer.size();
+    return Status::failure("Unrecognized sockaddr structure of size " +
+                           std::to_string(saddr_field_size));
+  }
+  }
+
+  data = std::move(output);
   return Status::success();
 }
 } // namespace zeek

@@ -11,6 +11,8 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
     static const std::string kExpectedEuid{"3"};
     static const std::string kExpectedGid{"4"};
     static const std::string kExpectedEgid{"5"};
+    static const std::string kExpectedA0{"23eb8e0"};
+    static const std::string kExpectedExe{"/usr/bin/bash"};
 
     // clang-format off
     static const MockedAuparseInterface::FieldList kAuditSyscallRecord = {
@@ -19,7 +21,7 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
       { "syscall", "59" },
       { "success", "yes" },
       { "exit", "0" },
-      { "a0", "23eb8e0" },
+      { "a0", kExpectedA0 },
       { "a1", "23ebbc0" },
       { "a2", "23c9860" },
       { "a3", "7ffe18d32ed0" },
@@ -68,6 +70,8 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
         REQUIRE(data.gid == std::strtoll(kExpectedGid.c_str(), nullptr, 10));
         REQUIRE(data.euid == std::strtoll(kExpectedEuid.c_str(), nullptr, 10));
         REQUIRE(data.egid == std::strtoll(kExpectedEgid.c_str(), nullptr, 10));
+        REQUIRE(data.exe == kExpectedExe);
+        REQUIRE(data.a0 == kExpectedA0);
         REQUIRE(data.succeeded);
       }
     }
@@ -265,6 +269,110 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
 
         REQUIRE(path_data.at(1U).ogid ==
                 std::strtoll(kFolderPathOgid02.c_str(), nullptr, 10));
+      }
+    }
+  }
+
+  GIVEN("a valid AUDIT_SOCKADDR record") {
+    static const std::string kSaddrValue01{"020004D2000000000000000000000000"};
+    static const std::string kSaddrValue02{
+        "01002F6465762F6C6F6700000000000000000000000000000000000000000000000000"
+        "0000000000000000000000000000000000000000000000000000000000000000000000"
+        "0000000000000000000000000000000000000000000000000000000000000000000000"
+        "0000000000"};
+    static const std::string kSaddrValue03{
+        "01002F7661722F72756E2F6E7363642F736F636B657400002306C4227E7F0000000000"
+        "000000000000FE5967FC7F000040DBF4227E7F0000C7FD5967FC7F000070E08B2DE955"
+        "00000100000000000000000000000000000075FC5967FC7F0000010000000000000000"
+        "0000000000"};
+
+    // clang-format off
+    static const MockedAuparseInterface::FieldList kAuditSockaddrRecord01 = {
+      { "type", "1306" },
+      { "saddr", kSaddrValue01 }
+    };
+    // clang-format on
+
+    // clang-format off
+    static const AudispConsumer::SockaddrRecordData kExpectedAuditSockaddrRecord01 = {
+      "AF_INET",
+      1234,
+      "0.0.0.0"
+    };
+    // clang-format on
+
+    // clang-format off
+    static const MockedAuparseInterface::FieldList kAuditSockaddrRecord02 = {
+      { "type", "1306" },
+      { "saddr", kSaddrValue02 }
+    };
+    // clang-format on
+
+    // clang-format off
+    static const AudispConsumer::SockaddrRecordData kExpectedAuditSockaddrRecord02 = {
+      "AF_LOCAL",
+      0,
+      "/dev/log"
+    };
+    // clang-format on
+
+    // clang-format off
+    static const MockedAuparseInterface::FieldList kAuditSockaddrRecord03 = {
+      { "type", "1306" },
+      { "saddr", kSaddrValue03 }
+    };
+    // clang-format on
+
+    // clang-format off
+    static const AudispConsumer::SockaddrRecordData kExpectedAuditSockaddrRecord03 = {
+      "AF_LOCAL",
+      0,
+      "/var/run/nscd/socket"
+    };
+    // clang-format on
+
+    // clang-format off
+    static const std::vector<MockedAuparseInterface::FieldList> kAuditSockaddrRecordList = {
+      kAuditSockaddrRecord01,
+      kAuditSockaddrRecord02,
+      kAuditSockaddrRecord03
+    };
+    // clang-format on
+
+    // clang-format off
+    static const std::vector<AudispConsumer::SockaddrRecordData> kExpectedAuditSockaddrRecordList = {
+      kExpectedAuditSockaddrRecord01,
+      kExpectedAuditSockaddrRecord02,
+      kExpectedAuditSockaddrRecord03
+    };
+    // clang-format on
+
+    WHEN("parsing the event record") {
+      std::vector<AudispConsumer::SockaddrRecordData> parsed_record_list;
+
+      for (const auto &mocked_record : kAuditSockaddrRecordList) {
+        MockedAuparseInterface::Ref auparse = {};
+        auto status = MockedAuparseInterface::create(auparse, mocked_record);
+        REQUIRE(status.succeeded());
+
+        AudispConsumer::SockaddrRecordData output = {};
+        status = AudispConsumer::parseSockaddrRecord(output, auparse);
+        REQUIRE(status.succeeded());
+
+        parsed_record_list.push_back(std::move(output));
+      }
+
+      THEN("record data is captured correctly") {
+        REQUIRE(parsed_record_list.size() == kAuditSockaddrRecordList.size());
+
+        for (std::size_t i = 0U; i < parsed_record_list.size(); ++i) {
+          const auto &parsed_data = parsed_record_list.at(i);
+          const auto &expected_data = kExpectedAuditSockaddrRecordList.at(i);
+
+          REQUIRE(parsed_data.family == expected_data.family);
+          REQUIRE(parsed_data.port == expected_data.port);
+          REQUIRE(parsed_data.address == expected_data.address);
+        }
       }
     }
   }

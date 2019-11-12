@@ -53,7 +53,11 @@ function(zeekAgent)
     SOURCES
       tests/main.cpp
 
+      tests/utils.h
+      tests/utils.cpp
+
       tests/processeventstableplugin.cpp
+      tests/socketeventstableplugin.cpp
   )
 endfunction()
 

@@ -1,7 +1,5 @@
 #include "audit_utils.h"
 
-#include <iostream>
-
 namespace zeek {
 bool convertHexDigitToByte(char &output, const char &input) {
   if (input >= '0' && input <= '9') {

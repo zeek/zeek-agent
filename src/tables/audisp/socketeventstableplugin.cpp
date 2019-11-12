@@ -1,5 +1,6 @@
 #include "tables/audisp/socketeventstableplugin.h"
 
+#include <chrono>
 #include <mutex>
 
 namespace zeek {
@@ -47,8 +48,7 @@ const SocketEventsTablePlugin::Schema &SocketEventsTablePlugin::schema() const {
     { "remote_address", IVirtualTable::ColumnType::String },
     { "local_port", IVirtualTable::ColumnType::Integer },
     { "remote_port", IVirtualTable::ColumnType::Integer },
-    { "time", IVirtualTable::ColumnType::Integer },
-    { "uptime", IVirtualTable::ColumnType::Integer }
+    { "time", IVirtualTable::ColumnType::Integer }
   };
   // clang-format on
 
@@ -102,18 +102,60 @@ Status SocketEventsTablePlugin::generateRow(
     Row &row, const IAudispConsumer::AuditEvent &audit_event) {
   row = {};
 
-  if (!audit_event.syscall_data.succeeded) {
-    return Status::success();
-  }
+  std::string action;
 
   switch (audit_event.syscall_data.type) {
   case IAudispConsumer::SyscallRecordData::Type::Bind:
+    action = "bind";
+    break;
+
   case IAudispConsumer::SyscallRecordData::Type::Connect:
+    action = "connect";
     break;
 
   default:
     return Status::success();
   }
+
+  if (!audit_event.sockaddr_data.has_value()) {
+    return Status::failure("The AUDIT_SOCKADDR record was not found");
+  }
+
+  const auto &syscall_data = audit_event.syscall_data;
+  const auto &sockaddr_data = audit_event.sockaddr_data.value();
+
+  row["action"] = action;
+  row["pid"] = syscall_data.process_id;
+  row["path"] = syscall_data.exe;
+
+  auto fd = std::strtoll(syscall_data.a0.c_str(), nullptr, 16U);
+  row["fd"] = fd;
+
+  row["auid"] = syscall_data.auid;
+  row["success"] = audit_event.syscall_data.succeeded ? "true" : "false";
+  row["family"] = sockaddr_data.family;
+
+  if (audit_event.syscall_data.type ==
+      IAudispConsumer::SyscallRecordData::Type::Bind) {
+
+    row["local_address"] = sockaddr_data.address;
+    row["local_port"] = sockaddr_data.port;
+
+    row["remote_address"] = {};
+    row["remote_port"] = {};
+
+  } else {
+    row["local_address"] = {};
+    row["local_port"] = {};
+
+    row["remote_address"] = sockaddr_data.address;
+    row["remote_port"] = sockaddr_data.port;
+  }
+
+  auto current_timestamp = std::chrono::duration_cast<std::chrono::seconds>(
+      std::chrono::system_clock::now().time_since_epoch());
+
+  row["time"] = std::to_string(current_timestamp.count());
 
   return Status::success();
 }

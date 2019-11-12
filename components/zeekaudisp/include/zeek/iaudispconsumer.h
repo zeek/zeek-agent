@@ -22,6 +22,8 @@ public:
     std::int64_t euid{0};
     std::int64_t gid{0};
     std::int64_t egid{0};
+    std::string exe;
+    std::string a0;
   };
 
   struct RawExecveRecordData final {
@@ -43,11 +45,18 @@ public:
 
   using PathRecordData = std::vector<PathRecord>;
 
+  struct SockaddrRecordData final {
+    std::string family;
+    std::int64_t port{0};
+    std::string address;
+  };
+
   struct AuditEvent final {
     SyscallRecordData syscall_data;
     std::optional<ExecveRecordData> execve_data;
     std::optional<PathRecordData> path_data;
     std::optional<std::string> cwd_data;
+    std::optional<SockaddrRecordData> sockaddr_data;
   };
 
   using AuditEventList = std::vector<AuditEvent>;

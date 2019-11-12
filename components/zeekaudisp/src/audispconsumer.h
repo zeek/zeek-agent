@@ -49,6 +49,9 @@ public:
   static Status parsePathRecord(PathRecordData &data,
                                 IAuparseInterface::Ref auparse);
 
+  static Status parseSockaddrRecord(SockaddrRecordData &data,
+                                    IAuparseInterface::Ref auparse);
+
   friend class IAudispConsumer;
 };
 } // namespace zeek

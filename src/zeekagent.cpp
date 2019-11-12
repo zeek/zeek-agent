@@ -48,7 +48,7 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
     // Test code
     IVirtualTable::RowList row_list;
     status =
-        d->virtual_database->query(row_list, "SELECT * FROM process_events");
+        d->virtual_database->query(row_list, "SELECT * FROM socket_events");
 
     if (!status.succeeded()) {
       std::cerr << "Failed to query the database: " << status.message() << "\n";
