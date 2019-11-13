@@ -75,6 +75,8 @@ Status VirtualDatabase::unregisterTable(const std::string &name) {
   }
 
   std::vector<std::string> module_list;
+  module_list.reserve(d->registered_module_list.size());
+
   std::vector<const char *> string_pointer_list;
 
   for (const auto &p : d->registered_module_list) {

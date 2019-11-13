@@ -3,6 +3,7 @@
 #include <atomic>
 #include <memory>
 
+#include <zeek/ivirtualdatabase.h>
 #include <zeek/status.h>
 
 namespace zeek {
@@ -17,6 +18,8 @@ public:
   ~ZeekAgent();
 
   Status exec(std::atomic_bool &terminate);
+
+  IVirtualDatabase &virtualDatabase();
 
   ZeekAgent(const ZeekAgent &) = delete;
   ZeekAgent &operator=(const ZeekAgent &) = delete;

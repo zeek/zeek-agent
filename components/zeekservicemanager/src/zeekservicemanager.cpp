@@ -1,8 +1,7 @@
-#include "servicemanager.h"
-#include "tables/service_manager/servicemanagertableplugin.h"
+#include "zeekservicemanager.h"
+#include "zeekservicemanagertableplugin.h"
 
 #include <future>
-#include <iostream>
 #include <unordered_map>
 
 namespace zeek {
@@ -24,11 +23,13 @@ Status serviceRunner(IZeekService &service, std::atomic_bool &terminate) {
 }
 } // namespace
 
-struct ServiceManager::PrivateData final {
-  PrivateData(IVirtualDatabase &virtual_database_)
-      : virtual_database(virtual_database_) {}
+struct ZeekServiceManager::PrivateData final {
+  PrivateData(IVirtualDatabase &virtual_database_, IZeekLogger &logger_)
+      : virtual_database(virtual_database_), logger(logger_) {}
 
   IVirtualDatabase &virtual_database;
+  IZeekLogger &logger;
+
   std::atomic_bool terminate{false};
 
   std::unordered_map<std::string, IZeekServiceFactory::Ref>
@@ -38,28 +39,11 @@ struct ServiceManager::PrivateData final {
   std::string service_manager_table_name;
 };
 
-Status ServiceManager::create(Ref &obj, IVirtualDatabase &virtual_database) {
-  obj.reset();
-
-  try {
-    auto ptr = new ServiceManager(virtual_database);
-    obj.reset(ptr);
-
-    return Status::success();
-
-  } catch (const std::bad_alloc &) {
-    return Status::failure("Memory allocation failure");
-
-  } catch (const Status &status) {
-    return status;
-  }
-}
-
-ServiceManager::~ServiceManager() {
+ZeekServiceManager::~ZeekServiceManager() {
   d->virtual_database.unregisterTable(d->service_manager_table_name);
 }
 
-Status ServiceManager::registerServiceFactory(
+Status ZeekServiceManager::registerServiceFactory(
     IZeekServiceFactory::Ref service_factory) {
   auto factory_name = service_factory->name();
 
@@ -75,7 +59,7 @@ Status ServiceManager::registerServiceFactory(
   return Status::success();
 }
 
-Status ServiceManager::startServices() {
+Status ZeekServiceManager::startServices() {
   for (const auto &p : d->service_factory_list) {
     const auto &factory_ref = p.second;
     auto &factory = *factory_ref.get();
@@ -89,7 +73,7 @@ Status ServiceManager::startServices() {
   return Status::success();
 }
 
-void ServiceManager::stopServices() {
+void ZeekServiceManager::stopServices() {
   d->terminate = true;
 
   for (auto &p : d->service_list) {
@@ -98,15 +82,17 @@ void ServiceManager::stopServices() {
 
     auto status = service_instance.status.get();
     if (!status.succeeded()) {
-      std::cerr << "Service '" << service_name
-                << "' returned an error: " << status.message() << "\n";
+      d->logger.logMessage(
+          IZeekLogger::Severity::Error,
+          "The service named '" + service_name +
+              "' could not be stopped correctly: " + status.message());
     }
   }
 
   d->service_list.clear();
 }
 
-std::vector<std::string> ServiceManager::serviceList() const {
+std::vector<std::string> ZeekServiceManager::serviceList() const {
   std::vector<std::string> output;
 
   for (auto &p : d->service_list) {
@@ -117,7 +103,7 @@ std::vector<std::string> ServiceManager::serviceList() const {
   return output;
 }
 
-void ServiceManager::checkServices() {
+void ZeekServiceManager::checkServices() {
   for (auto service_it = d->service_list.begin();
        service_it != d->service_list.end();) {
 
@@ -132,9 +118,11 @@ void ServiceManager::checkServices() {
     }
 
     auto status = service_instance.status.get();
-    std::cerr << "Service named '" << service_name
-              << "' has terminated: " << status.message()
-              << ". Restarting...\n";
+
+    d->logger.logMessage(
+        IZeekLogger::Severity::Error,
+        "The service named '" + service_name +
+            "' has terminated with the following status: " + status.message());
 
     service_it = d->service_list.erase(service_it);
   }
@@ -149,21 +137,25 @@ void ServiceManager::checkServices() {
 
     auto status = spawnService(*factory.get());
     if (status.succeeded()) {
-      std::cerr << "Service named '" << service_name
-                << "' was successfully restarted\n";
+      d->logger.logMessage(IZeekLogger::Severity::Error,
+                           "The service named '" + service_name +
+                               "' has been successfully restarted");
 
     } else {
-      std::cerr << "Failed to restart the service named '" << service_name
-                << "': " << status.message() << "\n";
+      d->logger.logMessage(IZeekLogger::Severity::Error,
+                           "The service named '" + service_name +
+                               "' could not be restarted");
     }
   }
 }
 
-ServiceManager::ServiceManager(IVirtualDatabase &virtual_database)
-    : d(new PrivateData(virtual_database)) {
+ZeekServiceManager::ZeekServiceManager(IVirtualDatabase &virtual_database,
+                                       IZeekLogger &logger)
+    : d(new PrivateData(virtual_database, logger)) {
 
-  ServiceManagerTablePlugin::Ref service_manager_table;
-  auto status = ServiceManagerTablePlugin::create(service_manager_table, *this);
+  ZeekServiceManagerTablePlugin::Ref service_manager_table;
+  auto status =
+      ZeekServiceManagerTablePlugin::create(service_manager_table, *this);
   if (!status.succeeded()) {
     throw status;
   }
@@ -176,7 +168,7 @@ ServiceManager::ServiceManager(IVirtualDatabase &virtual_database)
   }
 }
 
-Status ServiceManager::spawnService(IZeekServiceFactory &factory) {
+Status ZeekServiceManager::spawnService(IZeekServiceFactory &factory) {
   const auto &name = factory.name();
 
   auto service_it = d->service_list.find(name);
@@ -203,5 +195,23 @@ Status ServiceManager::spawnService(IZeekServiceFactory &factory) {
       std::async(serviceRunner, std::ref(service_ref), std::ref(d->terminate));
 
   return Status::success();
+}
+
+Status IZeekServiceManager::create(Ref &obj, IVirtualDatabase &virtual_database,
+                                   IZeekLogger &logger) {
+  obj.reset();
+
+  try {
+    auto ptr = new ZeekServiceManager(virtual_database, logger);
+    obj.reset(ptr);
+
+    return Status::success();
+
+  } catch (const std::bad_alloc &) {
+    return Status::failure("Memory allocation failure");
+
+  } catch (const Status &status) {
+    return status;
+  }
 }
 } // namespace zeek

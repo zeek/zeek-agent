@@ -20,11 +20,8 @@ function(zeekAgent)
     src/zeekagent.h
     src/zeekagent.cpp
 
-    src/servicemanager.h
-    src/servicemanager.cpp
-
-    src/tables/service_manager/servicemanagertableplugin.h
-    src/tables/service_manager/servicemanagertableplugin.cpp
+    src/logger.h
+    src/logger.cpp
 
     src/tables/audisp/audispservice.h
     src/tables/audisp/audispservice.cpp
@@ -40,6 +37,8 @@ function(zeekAgent)
     zeek_agent_cxx_settings
     zeek_audisp
     zeek_database
+    zeek_logger
+    zeek_service_manager
   )
 
   target_include_directories("${PROJECT_NAME}" PRIVATE

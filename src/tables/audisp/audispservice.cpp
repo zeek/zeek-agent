@@ -1,10 +1,11 @@
+#include "logger.h"
+
 #include "tables/audisp/audispservice.h"
 #include "tables/audisp/processeventstableplugin.h"
 #include "tables/audisp/socketeventstableplugin.h"
 
 #include <algorithm>
 #include <cassert>
-#include <iostream>
 
 #include <zeek/iaudispconsumer.h>
 
@@ -60,12 +61,16 @@ Status AudispService::exec(std::atomic_bool &terminate) {
 
     status = process_events_table_impl.processEvents(event_list);
     if (!status.succeeded()) {
-      std::cerr << status.message() << "\n";
+      logMessage(IZeekLogger::Severity::Error,
+                 "The process_events table failed to process some events: " +
+                     status.message());
     }
 
     status = socket_events_table_impl.processEvents(event_list);
     if (!status.succeeded()) {
-      std::cerr << status.message() << "\n";
+      logMessage(IZeekLogger::Severity::Error,
+                 "The socket_events table failed to process some events: " +
+                     status.message());
     }
   }
 

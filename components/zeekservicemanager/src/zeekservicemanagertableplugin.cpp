@@ -1,19 +1,21 @@
-#include "tables/service_manager/servicemanagertableplugin.h"
+#include "zeekservicemanagertableplugin.h"
 
 namespace zeek {
-struct ServiceManagerTablePlugin::PrivateData final {
-  PrivateData(ServiceManager &service_manager_)
+struct ZeekServiceManagerTablePlugin::PrivateData final {
+  PrivateData(IZeekServiceManager &service_manager_)
       : service_manager(service_manager_) {}
 
-  ServiceManager &service_manager;
+  IZeekServiceManager &service_manager;
 };
 
-Status ServiceManagerTablePlugin::create(Ref &obj,
-                                         ServiceManager &service_manager) {
+Status
+ZeekServiceManagerTablePlugin::create(Ref &obj,
+                                      IZeekServiceManager &service_manager) {
+
   obj.reset();
 
   try {
-    auto ptr = new ServiceManagerTablePlugin(service_manager);
+    auto ptr = new ZeekServiceManagerTablePlugin(service_manager);
     obj.reset(ptr);
 
     return Status::success();
@@ -26,15 +28,15 @@ Status ServiceManagerTablePlugin::create(Ref &obj,
   }
 }
 
-ServiceManagerTablePlugin::~ServiceManagerTablePlugin() {}
+ZeekServiceManagerTablePlugin::~ZeekServiceManagerTablePlugin() {}
 
-const std::string &ServiceManagerTablePlugin::name() const {
+const std::string &ZeekServiceManagerTablePlugin::name() const {
   static const std::string kTableName{"zeek_service_manager"};
   return kTableName;
 }
 
-const ServiceManagerTablePlugin::Schema &
-ServiceManagerTablePlugin::schema() const {
+const ZeekServiceManagerTablePlugin::Schema &
+ZeekServiceManagerTablePlugin::schema() const {
   // clang-format off
   static const Schema kTableSchema = {
     { "name", IVirtualTable::ColumnType::String }
@@ -44,7 +46,7 @@ ServiceManagerTablePlugin::schema() const {
   return kTableSchema;
 }
 
-Status ServiceManagerTablePlugin::generateRowList(RowList &row_list) {
+Status ZeekServiceManagerTablePlugin::generateRowList(RowList &row_list) {
   row_list = {};
 
   for (const auto &service_name : d->service_manager.serviceList()) {
@@ -57,7 +59,7 @@ Status ServiceManagerTablePlugin::generateRowList(RowList &row_list) {
   return Status::success();
 }
 
-ServiceManagerTablePlugin::ServiceManagerTablePlugin(
-    ServiceManager &service_manager)
+ZeekServiceManagerTablePlugin::ZeekServiceManagerTablePlugin(
+    IZeekServiceManager &service_manager)
     : d(new PrivateData(service_manager)) {}
 } // namespace zeek

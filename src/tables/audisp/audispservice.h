@@ -1,10 +1,6 @@
 #pragma once
 
-#include "izeekservicefactory.h"
-
-#include <memory>
-
-#include <zeek/ivirtualdatabase.h>
+#include <zeek/izeekservicemanager.h>
 
 namespace zeek {
 class AudispService final : public IZeekService {
