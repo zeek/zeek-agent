@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include <zeek/ivirtualdatabase.h>
 
 namespace zeek {

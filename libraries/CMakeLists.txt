@@ -9,6 +9,7 @@ function(zeekAgentLibraries)
   add_subdirectory("sqlite")
   add_subdirectory("catch2")
   add_subdirectory("audit")
+  add_subdirectory("rapidjson")
 endfunction()
 
 zeekAgentLibraries()

@@ -105,8 +105,12 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
     }
   }
 
+  logMessage(IZeekLogger::Severity::Information, "Stopping all services");
+
   d->service_manager->stopServices();
   d->service_manager.reset();
+
+  logMessage(IZeekLogger::Severity::Information, "Terminating");
 
   return Status::success();
 }

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <memory>
-
 #include <zeek/izeeklogger.h>
 
 namespace zeek {

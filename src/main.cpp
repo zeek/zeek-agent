@@ -1,11 +1,10 @@
+#include "configuration.h"
 #include "logger.h"
 #include "zeekagent.h"
 
 #include <iostream>
 
 #include <signal.h>
-
-const std::string kDefaultLogFolder{"/var/log/zeek-agent"};
 
 std::atomic_bool terminate{false};
 
@@ -26,11 +25,17 @@ int main() {
     return 1;
   }
 
-  zeek::IZeekLogger::Configuration logger_configuration;
-  logger_configuration.log_folder = kDefaultLogFolder;
+  status = zeek::initializeConfiguration(zeek_agent->virtualDatabase());
+  if (!status.succeeded()) {
+    std::cerr << "Initialization failed: " << status.message() << "\n";
+    return 1;
+  }
 
-  status =
-      initializeLogger(logger_configuration, zeek_agent->virtualDatabase());
+  zeek::IZeekLogger::Configuration logger_configuration;
+  logger_configuration.log_folder = zeek::getConfig().getLogFolder();
+
+  status = zeek::initializeLogger(logger_configuration,
+                                  zeek_agent->virtualDatabase());
 
   if (!status.succeeded()) {
     std::cerr << "Initialization failed: " << status.message() << "\n";
@@ -38,6 +43,8 @@ int main() {
   }
 
   status = zeek_agent->exec(terminate);
+
+  zeek::deinitializeConfiguration();
   zeek::deinitializeLogger();
 
   if (!status.succeeded()) {

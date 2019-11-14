@@ -23,6 +23,9 @@ function(zeekAgent)
     src/logger.h
     src/logger.cpp
 
+    src/configuration.h
+    src/configuration.cpp
+
     src/tables/audisp/audispservice.h
     src/tables/audisp/audispservice.cpp
 
@@ -39,6 +42,7 @@ function(zeekAgent)
     zeek_database
     zeek_logger
     zeek_service_manager
+    zeek_configuration
   )
 
   target_include_directories("${PROJECT_NAME}" PRIVATE

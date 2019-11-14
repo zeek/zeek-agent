@@ -6,6 +6,7 @@ function(zeekComponents)
   add_subdirectory("zeekaudisp")
   add_subdirectory("zeeklogger")
   add_subdirectory("zeekservicemanager")
+  add_subdirectory("zeekconfiguration")
 endfunction()
 
 zeekComponents()
