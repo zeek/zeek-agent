@@ -26,12 +26,15 @@ function(osqueryZeekMain)
   generateClangTidyTarget()
   generateCppcheckTarget()
 
+  set(CMAKE_CXX_COMPILER "${CLANGXX_EXECUTABLE}")
+  string(REPLACE "/clang++" "/clang" CMAKE_C_COMPILER "${CMAKE_CXX_COMPILER}")
+
   set(BROKER_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libraries/broker)
   set(DISABLE_PYTHON_BINDINGS true) # Not Needed in the Project, and produces Clang Warnings
   set(BROKER_DISABLE_TESTS true)
 
   # Include Directories from Broker and CAF that are included in Zeek
-  include_directories(BEFORE 
+  include_directories(BEFORE
                       ${CMAKE_CURRENT_BUILD_DIR}/libraries/broker/include
                       ${CMAKE_CURRENT_SOURCE_DIR}/libraries/broker/include
                       ${CMAKE_CURRENT_SOURCE_DIR}/libraries/broker
@@ -46,7 +49,7 @@ function(osqueryZeekMain)
   set(subdirectory_list
     zeek-remote
     zeek-extension
-    # libraries 
+    # libraries
   )
 
   set(library_list

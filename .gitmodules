@@ -1,3 +1,6 @@
 [submodule "libraries/rapidjson/src"]
 	path = libraries/rapidjson/src
 	url = https://github.com/Tencent/rapidjson.git
+[submodule "libraries/broker"]
+	path = libraries/broker
+	url = https://github.com/bro/broker.git
