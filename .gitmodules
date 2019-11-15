@@ -1,9 +1,3 @@
-[submodule "libraries/actor-framework/src"]
-	path = libraries/actor-framework/src
-	url = https://github.com/actor-framework/actor-framework.git
-[submodule "libraries/broker/src"]
-	path = libraries/broker/src
-	url = https://github.com/bro/broker.git
 [submodule "libraries/rapidjson/src"]
 	path = libraries/rapidjson/src
 	url = https://github.com/Tencent/rapidjson.git
