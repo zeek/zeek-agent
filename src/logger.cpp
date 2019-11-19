@@ -23,13 +23,4 @@ Status initializeLogger(const IZeekLogger::Configuration &configuration,
 void deinitializeLogger() { zeek_logger.reset(); }
 
 IZeekLogger &getLogger() { return *zeek_logger.get(); }
-
-void logMessage(IZeekLogger::Severity severity, const std::string &message) {
-  if (!zeek_logger) {
-    std::cerr << loggerSeverityToString(severity) << ": " << message << "\n";
-
-  } else {
-    zeek_logger->logMessage(severity, message);
-  }
-}
 } // namespace zeek

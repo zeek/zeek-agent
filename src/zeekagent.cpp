@@ -59,8 +59,9 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
       status = d->virtual_database->query(row_list, query);
 
       if (!status.succeeded()) {
-        logMessage(IZeekLogger::Severity::Error,
-                   "Failed to query the database: " + status.message());
+        getLogger().logMessage(IZeekLogger::Severity::Error,
+                               "Failed to query the database: " +
+                                   status.message());
         continue;
       }
 
@@ -105,12 +106,13 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
     }
   }
 
-  logMessage(IZeekLogger::Severity::Information, "Stopping all services");
+  getLogger().logMessage(IZeekLogger::Severity::Information,
+                         "Stopping all services");
 
   d->service_manager->stopServices();
   d->service_manager.reset();
 
-  logMessage(IZeekLogger::Severity::Information, "Terminating");
+  getLogger().logMessage(IZeekLogger::Severity::Information, "Terminating");
 
   return Status::success();
 }

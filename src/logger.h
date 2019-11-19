@@ -10,6 +10,4 @@ Status initializeLogger(const IZeekLogger::Configuration &configuration,
 void deinitializeLogger();
 
 IZeekLogger &getLogger();
-
-void logMessage(IZeekLogger::Severity severity, const std::string &message);
 } // namespace zeek
