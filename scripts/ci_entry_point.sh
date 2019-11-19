@@ -39,7 +39,7 @@ main() {
   executeCommand \
     "Installing system dependencies" \
     . \
-    sudo apt-get install clang clang-tidy-8 cppcheck ccache curl libauparse-dev libaudit-dev -y
+    sudo apt-get install clang clang-tidy-8 cppcheck ccache curl libauparse-dev libaudit-dev libssl-dev -y
 
   local cmake_release_name="cmake-${CMAKE_VERSION}-Linux-x86_64"
   local cmake_url="https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/${cmake_release_name}.tar.gz"

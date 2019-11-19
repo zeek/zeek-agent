@@ -10,6 +10,8 @@ function(zeekAgentLibraries)
   add_subdirectory("catch2")
   add_subdirectory("audit")
   add_subdirectory("rapidjson")
+  add_subdirectory("broker")
+  add_subdirectory("openssl")
 endfunction()
 
 zeekAgentLibraries()
