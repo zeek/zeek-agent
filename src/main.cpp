@@ -31,12 +31,7 @@ int main() {
     return 1;
   }
 
-  zeek::IZeekLogger::Configuration logger_configuration;
-  logger_configuration.log_folder = zeek::getConfig().getLogFolder();
-
-  status = zeek::initializeLogger(logger_configuration,
-                                  zeek_agent->virtualDatabase());
-
+  status = zeek::initializeLogger(zeek_agent->virtualDatabase());
   if (!status.succeeded()) {
     std::cerr << "Initialization failed: " << status.message() << "\n";
     return 1;

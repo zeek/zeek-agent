@@ -5,8 +5,6 @@
 
 namespace zeek {
 Status initializeConfiguration(IVirtualDatabase &virtual_database);
-
 void deinitializeConfiguration();
-
 IZeekConfiguration &getConfig();
 } // namespace zeek

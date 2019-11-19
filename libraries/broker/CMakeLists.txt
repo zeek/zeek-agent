@@ -249,6 +249,7 @@ function(generateActorFramework)
       zeek_agent_cxx_settings
       thirdparty_caf_core
       thirdparty_caf_io
+      thirdparty_openssl
 
     PRIVATE
       zeek_agent_libraries_settings
@@ -323,7 +324,6 @@ function(generateBroker)
   )
 
   target_compile_definitions(thirdparty_broker PRIVATE
-    BROKER_HAVE_ROCKSDB=0
     BROKER_LINUX=1
   )
 endfunction()

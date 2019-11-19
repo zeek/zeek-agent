@@ -28,6 +28,7 @@ protected:
   ZeekAgent();
 
 private:
+  Status initializeConnection();
   Status initializeServiceManager();
 
   Status startServices();

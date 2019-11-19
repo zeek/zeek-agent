@@ -20,6 +20,9 @@ function(zeekAgent)
     src/zeekagent.h
     src/zeekagent.cpp
 
+    src/zeekconnection.h
+    src/zeekconnection.cpp
+
     src/logger.h
     src/logger.cpp
 
@@ -43,6 +46,7 @@ function(zeekAgent)
     zeek_logger
     zeek_service_manager
     zeek_configuration
+    thirdparty_broker
   )
 
   target_include_directories("${PROJECT_NAME}" PRIVATE

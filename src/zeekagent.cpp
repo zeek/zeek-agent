@@ -1,6 +1,7 @@
 #include "zeekagent.h"
 #include "logger.h"
 #include "tables/audisp/audispservice.h"
+#include "zeekconnection.h"
 
 #include <chrono>
 #include <iostream>
@@ -12,6 +13,7 @@ namespace zeek {
 struct ZeekAgent::PrivateData final {
   IVirtualDatabase::Ref virtual_database;
   IZeekServiceManager::Ref service_manager;
+  ZeekConnection::Ref zeek_connection;
 };
 
 Status ZeekAgent::create(Ref &obj) {
@@ -34,9 +36,14 @@ Status ZeekAgent::create(Ref &obj) {
 ZeekAgent::~ZeekAgent() {}
 
 Status ZeekAgent::exec(std::atomic_bool &terminate) {
-  auto status = initializeServiceManager();
+  auto status = initializeConnection();
   if (!status.succeeded()) {
-    throw status;
+    return status;
+  }
+
+  status = initializeServiceManager();
+  if (!status.succeeded()) {
+    return status;
   }
 
   status = d->service_manager->startServices();
@@ -44,65 +51,29 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
     return status;
   }
 
-  // TODO(alessandro): Add zeek connection handling here
-
-  // Test code
-  static const std::vector<std::string> kQueryList = {
-      "SELECT * FROM socket_events", "SELECT * FROM process_events",
-      "SELECT * FROM zeek_service_manager", "SELECT * FROM zeek_logger"};
-
   while (!terminate) {
     d->service_manager->checkServices();
 
-    for (const auto &query : kQueryList) {
-      IVirtualTable::RowList row_list;
-      status = d->virtual_database->query(row_list, query);
+    if (d->zeek_connection) {
+      status = d->zeek_connection->processEvents();
+    } else {
+      status = initializeConnection();
+    }
 
+    if (!status.succeeded()) {
+      getLogger().logMessage(
+          IZeekLogger::Severity::Error,
+          "The connection has been lost. Attempting to reconnect...");
+
+      status = initializeConnection();
       if (!status.succeeded()) {
-        getLogger().logMessage(IZeekLogger::Severity::Error,
-                               "Failed to query the database: " +
-                                   status.message());
+        getLogger().logMessage(
+            IZeekLogger::Severity::Error,
+            "Reconnecting has failed. Retrying again later...");
+
+        std::this_thread::sleep_for(std::chrono::seconds(2));
         continue;
       }
-
-      if (row_list.empty()) {
-        continue;
-      }
-
-      std::cout << "\n\n\nResults for query " << query << "\n";
-      for (const auto &current_row : row_list) {
-        for (const auto &p : current_row) {
-          const auto &column_name = p.first;
-          const auto &column_value = p.second;
-
-          if (!column_value.has_value()) {
-            continue;
-          }
-
-          std::cout << column_name << ": '";
-          const auto &column_value_data = column_value.value();
-
-          switch (column_value_data.index()) {
-          case 0U:
-            std::cout << std::get<0>(column_value_data);
-            break;
-
-          case 1U:
-            std::cout << std::get<1>(column_value_data);
-            break;
-
-          default:
-            std::cout << "<INVALID TYPE>";
-            break;
-          }
-
-          std::cout << "' ";
-        }
-
-        std::cout << "\n";
-      }
-
-      std::this_thread::sleep_for(std::chrono::seconds(2));
     }
   }
 
@@ -126,6 +97,17 @@ ZeekAgent::ZeekAgent() : d(new PrivateData) {
   if (!status.succeeded()) {
     throw status;
   }
+}
+
+Status ZeekAgent::initializeConnection() {
+  d->zeek_connection.reset();
+
+  auto status = ZeekConnection::create(d->zeek_connection);
+  if (!status.succeeded()) {
+    return status;
+  }
+
+  return Status::success();
 }
 
 Status ZeekAgent::initializeServiceManager() {

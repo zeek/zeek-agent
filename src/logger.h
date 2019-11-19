@@ -4,10 +4,7 @@
 #include <zeek/izeeklogger.h>
 
 namespace zeek {
-Status initializeLogger(const IZeekLogger::Configuration &configuration,
-                        IVirtualDatabase &virtual_database);
-
+Status initializeLogger(IVirtualDatabase &virtual_database);
 void deinitializeLogger();
-
 IZeekLogger &getLogger();
 } // namespace zeek

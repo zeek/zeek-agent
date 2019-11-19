@@ -1,17 +1,17 @@
 #include "logger.h"
-
-#include <iostream>
+#include "configuration.h"
 
 namespace zeek {
 namespace {
 IZeekLogger::Ref zeek_logger;
 } // namespace
 
-Status initializeLogger(const IZeekLogger::Configuration &configuration,
-                        IVirtualDatabase &virtual_database) {
+Status initializeLogger(IVirtualDatabase &virtual_database) {
+  IZeekLogger::Configuration logger_config;
+  logger_config.log_folder = zeek::getConfig().getLogFolder();
 
   auto status =
-      IZeekLogger::create(zeek_logger, configuration, virtual_database);
+      IZeekLogger::create(zeek_logger, logger_config, virtual_database);
 
   if (!status.succeeded()) {
     return status;
