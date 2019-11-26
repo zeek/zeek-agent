@@ -102,9 +102,10 @@ Status VirtualDatabase::unregisterTable(const std::string &name) {
   return Status::success();
 }
 
-Status VirtualDatabase::query(IVirtualTable::RowList &row_list,
+Status VirtualDatabase::query(QueryOutput &output,
                               const std::string &query) const {
-  row_list = {};
+
+  output = {};
 
   SqliteStatement sql_stmt;
   auto status = prepareSqliteStatement(sql_stmt, d->sqlite_database, query);
@@ -116,23 +117,23 @@ Status VirtualDatabase::query(IVirtualTable::RowList &row_list,
     return status;
   }
 
-  IVirtualTable::RowList output;
+  QueryOutput temp_output;
   auto column_count = sqlite3_column_count(sql_stmt.get());
 
   while (sqlite3_step(sql_stmt.get()) == SQLITE_ROW) {
-    IVirtualTable::Row current_row = {};
+    OutputRow current_row = {};
 
     for (int column_index = 0; column_index < column_count; ++column_index) {
-      auto sqlite_type = sqlite3_column_type(sql_stmt.get(), column_index);
+      ColumnValue column = {};
 
-      IVirtualTable::OptionalVariant value = {};
+      auto sqlite_type = sqlite3_column_type(sql_stmt.get(), column_index);
 
       switch (sqlite_type) {
       case SQLITE_NULL:
         break;
 
       case SQLITE_INTEGER:
-        value = static_cast<std::int64_t>(
+        column.data = static_cast<std::int64_t>(
             sqlite3_column_int(sql_stmt.get(), column_index));
 
         break;
@@ -141,8 +142,7 @@ Status VirtualDatabase::query(IVirtualTable::RowList &row_list,
         auto string_data = reinterpret_cast<const char *>(
             sqlite3_column_text(sql_stmt.get(), column_index));
 
-        value = std::string(string_data);
-
+        column.data = std::string(string_data);
         break;
       }
 
@@ -150,16 +150,15 @@ Status VirtualDatabase::query(IVirtualTable::RowList &row_list,
         return Status::failure("Invalid column type found");
       }
 
-      auto column_name = sqlite3_column_name(sql_stmt.get(), column_index);
-      current_row.insert({column_name, std::move(value)});
+      column.name = sqlite3_column_name(sql_stmt.get(), column_index);
+
+      current_row.push_back(std::move(column));
     }
 
-    output.push_back(std::move(current_row));
+    temp_output.push_back(std::move(current_row));
   }
 
-  row_list = std::move(output);
-  output = {};
-
+  output = std::move(temp_output);
   return Status::success();
 }
 

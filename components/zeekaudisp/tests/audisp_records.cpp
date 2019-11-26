@@ -295,7 +295,7 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
 
     // clang-format off
     static const AudispConsumer::SockaddrRecordData kExpectedAuditSockaddrRecord01 = {
-      "AF_INET",
+      2,
       1234,
       "0.0.0.0"
     };
@@ -310,7 +310,7 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
 
     // clang-format off
     static const AudispConsumer::SockaddrRecordData kExpectedAuditSockaddrRecord02 = {
-      "AF_LOCAL",
+      1,
       0,
       "/dev/log"
     };
@@ -325,7 +325,7 @@ SCENARIO("AudispConsumer record parsers", "[AudispConsumer]") {
 
     // clang-format off
     static const AudispConsumer::SockaddrRecordData kExpectedAuditSockaddrRecord03 = {
-      "AF_LOCAL",
+      1,
       0,
       "/var/run/nscd/socket"
     };

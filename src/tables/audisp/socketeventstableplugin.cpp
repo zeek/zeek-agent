@@ -132,8 +132,13 @@ Status SocketEventsTablePlugin::generateRow(
   row["fd"] = fd;
 
   row["auid"] = syscall_data.auid;
-  row["success"] = audit_event.syscall_data.succeeded ? "true" : "false";
+  row["success"] = audit_event.syscall_data.succeeded ? 1 : 0;
   row["family"] = sockaddr_data.family;
+
+  // TODO: remote_address/remote_port and local_address/local_port
+  // should be set to {} when not used (so that SQLite will return
+  // a NULL value). This is however not yet supported by the Zeek
+  // scripts, so we'll just return empty strings
 
   if (audit_event.syscall_data.type ==
       IAudispConsumer::SyscallRecordData::Type::Bind) {
@@ -141,12 +146,12 @@ Status SocketEventsTablePlugin::generateRow(
     row["local_address"] = sockaddr_data.address;
     row["local_port"] = sockaddr_data.port;
 
-    row["remote_address"] = {};
-    row["remote_port"] = {};
+    row["remote_address"] = {""};
+    row["remote_port"] = {0};
 
   } else {
-    row["local_address"] = {};
-    row["local_port"] = {};
+    row["local_address"] = {""};
+    row["local_port"] = {0};
 
     row["remote_address"] = sockaddr_data.address;
     row["remote_port"] = sockaddr_data.port;
@@ -155,7 +160,7 @@ Status SocketEventsTablePlugin::generateRow(
   auto current_timestamp = std::chrono::duration_cast<std::chrono::seconds>(
       std::chrono::system_clock::now().time_since_epoch());
 
-  row["time"] = std::to_string(current_timestamp.count());
+  row["time"] = static_cast<std::int64_t>(current_timestamp.count());
 
   return Status::success();
 }

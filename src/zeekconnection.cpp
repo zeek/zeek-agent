@@ -2,7 +2,6 @@
 #include "configuration.h"
 #include "logger.h"
 
-#include <iostream>
 #include <unordered_map>
 
 #include <poll.h>
@@ -13,6 +12,14 @@
 
 namespace zeek {
 namespace {
+const std::string kHostSubscribeEvent{"osquery::host_subscribe"};
+const std::string kHostUnsubscribeEvent{"osquery::host_unsubscribe"};
+
+const std::string kHostJoinEvent{"osquery::host_join"};
+const std::string kHostLeaveEvent{"osquery::host_leave"};
+
+const std::string kHostExecuteEvent{"osquery::host_execute"};
+
 std::string getSystemHostname() {
   std::vector<char> buffer(1024);
   gethostname(buffer.data(), buffer.size());
@@ -20,6 +27,28 @@ std::string getSystemHostname() {
   buffer.push_back(0);
   return buffer.data();
 }
+
+template <typename FieldType, int field_index>
+FieldType getZeekEventField(const broker::zeek::Event &event) {
+  const auto &argument_list = event.args();
+  if (field_index >= argument_list.size()) {
+    throw Status::failure("Field does not exists");
+  }
+
+  const auto &argument = argument_list[field_index];
+  if (!broker::is<FieldType>(argument)) {
+    throw Status::failure("Field is of wrong type");
+  }
+
+  return broker::get<FieldType>(argument);
+}
+
+auto getZeekEventResponseEventName = getZeekEventField<std::string, 0>;
+auto getZeekEventQueryString = getZeekEventField<std::string, 1>;
+auto getZeekEventCookie = getZeekEventField<std::string, 2>;
+auto getZeekEventResponseTopic = getZeekEventField<std::string, 3>;
+auto getZeekEventUpdateType = getZeekEventField<std::string, 4>;
+auto getZeekEventInterval = getZeekEventField<std::uint64_t, 5>;
 } // namespace
 
 struct ZeekConnection::PrivateData final {
@@ -33,6 +62,8 @@ struct ZeekConnection::PrivateData final {
 
   std::unordered_map<std::string, broker::subscriber> subscriber_map;
   std::vector<std::string> joined_group_list;
+
+  QueryScheduler::TaskQueue task_queue;
 };
 
 Status ZeekConnection::create(Ref &obj) {
@@ -116,12 +147,117 @@ Status ZeekConnection::processEvents() {
   }
 
   for (auto &subscriber_p : d->subscriber_map) {
-    const auto &topic = subscriber_p.first;
     auto &subscriber = subscriber_p.second;
 
     for (const auto &message : subscriber.poll()) {
       broker::zeek::Event event(caf::get<1>(message));
-      std::cout << "DEBUG: " << topic << ": " << event.name() << std::endl;
+
+      if (event.name() == kHostJoinEvent || event.name() == kHostLeaveEvent) {
+        const auto &argument_list = event.args();
+
+        if (argument_list.size() != 1U) {
+          getLogger().logMessage(IZeekLogger::Severity::Error,
+                                 "Invalid host_join/host_leave event received "
+                                 "(wrong argument count)");
+
+          continue;
+        }
+
+        auto group_name_ptr = broker::get_if<std::string>(argument_list[0]);
+        if (group_name_ptr == nullptr) {
+          getLogger().logMessage(IZeekLogger::Severity::Error,
+                                 "Invalid host_join/host_leave event received "
+                                 "(missing or invalid group name)");
+
+          continue;
+        }
+
+        const auto &group_name = *group_name_ptr;
+
+        if (event.name() == kHostJoinEvent) {
+          status = joinGroup(group_name);
+        } else {
+          status = leaveGroup(group_name);
+        }
+
+        if (!status.succeeded()) {
+          getLogger().logMessage(
+              IZeekLogger::Severity::Error,
+              "Failed to handle host_join/host_leave event: " +
+                  status.message());
+        }
+
+      } else {
+        QueryScheduler::Task pending_task;
+        status = taskFromZeekEvent(pending_task, event);
+        if (!status.succeeded()) {
+          getLogger().logMessage(IZeekLogger::Severity::Error,
+                                 status.message());
+
+        } else {
+          d->task_queue.push_back(std::move(pending_task));
+        }
+      }
+    }
+  }
+
+  return Status::success();
+}
+
+QueryScheduler::TaskQueue ZeekConnection::getTaskQueue() {
+  auto output = std::move(d->task_queue);
+  d->task_queue = {};
+
+  return output;
+}
+
+Status ZeekConnection::processTaskOutputList(
+    QueryScheduler::TaskOutputList task_output_list) {
+  for (const auto &task_output : task_output_list) {
+    // Skip one-shot queries for now
+    if (task_output.task.type == QueryScheduler::Task::Type::ExecuteQuery) {
+
+      continue;
+    }
+
+    const auto &current_task = task_output.task;
+
+    // Hard-code what the previous code called "trigger". We are querying
+    // event-based tables now, and differentials make no sense in this case
+    std::string trigger{"osquery::ADD"};
+
+    broker::vector message_header(
+        {broker::data(getHostIdentifier()),
+         broker::data(broker::data(broker::enum_value{trigger})),
+         broker::data(current_task.cookie)});
+
+    for (const auto &row : task_output.query_output) {
+      broker::vector message_data = {broker::data(message_header)};
+
+      for (const auto &column : row) {
+        if (column.data.has_value()) {
+          const auto &column_variant = column.data.value();
+
+          if (std::holds_alternative<std::string>(column_variant)) {
+            message_data.push_back(
+                broker::data(std::get<std::string>(column_variant)));
+          } else {
+            message_data.push_back(
+                broker::data(std::get<std::int64_t>(column_variant)));
+          }
+
+        } else {
+          // TODO: Add support for NULL
+          message_data.push_back(broker::data());
+        }
+      }
+
+      // clang-format off
+      d->broker_endpoint->publish(
+        current_task.response_topic,
+        broker::zeek::Event(current_task.response_event, message_data)
+      );
+      // clang-format on
     }
   }
 
@@ -328,6 +464,101 @@ std::string ZeekConnection::getHostIdentifier() {
   return kSystemHostname;
 }
 
+Status
+ZeekConnection::scheduledTaskFromZeekEvent(QueryScheduler::Task &task,
+                                           const broker::zeek::Event &event) {
+  task = {};
+
+  const auto &event_name = event.name();
+  if (event_name != kHostSubscribeEvent &&
+      event_name != kHostUnsubscribeEvent) {
+
+    return Status::failure(
+        "Invalid event type (expected: host_subscribe or host_unsubscribe)");
+  }
+
+  task.type = (event.name() == kHostSubscribeEvent)
+                  ? QueryScheduler::Task::Type::AddScheduledQuery
+                  : QueryScheduler::Task::Type::RemoveScheduledQuery;
+
+  try {
+    task.query = getZeekEventQueryString(event);
+    task.response_event = getZeekEventResponseEventName(event);
+    task.cookie = getZeekEventCookie(event);
+    task.response_topic = getZeekEventResponseTopic(event);
+    task.interval = getZeekEventInterval(event);
+
+    auto update_type = getZeekEventUpdateType(event);
+    if (update_type == "ADDED") {
+      task.update_type = QueryScheduler::Task::UpdateType::Added;
+
+    } else if (update_type == "REMOVED") {
+      task.update_type = QueryScheduler::Task::UpdateType::Removed;
+
+    } else if (update_type == "BOTH") {
+      task.update_type = QueryScheduler::Task::UpdateType::Both;
+
+    } else {
+      return Status::failure("Invalid update type for scheduled queries: " +
+                             update_type);
+    }
+
+    return Status::success();
+
+  } catch (const Status &status) {
+    return status;
+  }
+}
+
+Status
+ZeekConnection::oneShotTaskFromZeekEvent(QueryScheduler::Task &task,
+                                         const broker::zeek::Event &event) {
+  task = {};
+
+  const auto &event_name = event.name();
+  if (event_name != kHostExecuteEvent) {
+    return Status::failure("Invalid event type (expected: host_execute)");
+  }
+
+  try {
+    task.type = QueryScheduler::Task::Type::ExecuteQuery;
+    task.query = getZeekEventQueryString(event);
+    task.response_event = getZeekEventResponseEventName(event);
+    task.cookie = getZeekEventCookie(event);
+    task.response_topic = getZeekEventResponseTopic(event);
+
+    auto update_type = getZeekEventUpdateType(event);
+    if (update_type != "SNAPSHOT") {
+      return Status::failure("Invalid update type for one-shot queries: " +
+                             update_type);
+    }
+
+    return Status::success();
+
+  } catch (const Status &status) {
+    return status;
+  }
+}
+
+Status ZeekConnection::taskFromZeekEvent(QueryScheduler::Task &task,
+                                         const broker::zeek::Event &event) {
+
+  const auto &event_name = event.name();
+
+  if (event_name == kHostSubscribeEvent ||
+      event_name == kHostUnsubscribeEvent) {
+
+    return scheduledTaskFromZeekEvent(task, event);
+
+  } else if (event_name == kHostExecuteEvent) {
+    return scheduledTaskFromZeekEvent(task, event);
+
+  } else {
+    task = {};
+    return Status::failure("Invalid event name: " + event_name);
+  }
+}
+
 #define ZEEK_TOPIC_PREFIX "/bro/osquery/"
 
 const std::string ZeekConnection::BrokerTopic_ALL{ZEEK_TOPIC_PREFIX "hosts"};
@@ -345,16 +576,5 @@ const std::string ZeekConnection::BrokerTopic_PRE_CUSTOMS{ZEEK_TOPIC_PREFIX
                                                           "custom/"};
 
 const std::string ZeekConnection::BrokerEvent_HOST_NEW{"osquery::host_new"};
-const std::string ZeekConnection::BrokerEvent_HOST_JOIN{"osquery::host_join"};
-const std::string ZeekConnection::BrokerEvent_HOST_LEAVE{"osquery::host_leave"};
-
-const std::string ZeekConnection::BrokerEvent_HOST_EXECUTE{
-    "osquery::host_execute"};
-
-const std::string ZeekConnection::BrokerEvent_HOST_SUBSCRIBE{
-    "osquery::host_subscribe"};
-
-const std::string ZeekConnection::BrokerEvent_HOST_UNSUBSCRIBE{
-    "osquery::host_unsubscribe"};
 
 } // namespace zeek

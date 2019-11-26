@@ -7,13 +7,9 @@
 #include <iostream>
 #include <thread>
 
-#include <zeek/izeekservicemanager.h>
-
 namespace zeek {
 struct ZeekAgent::PrivateData final {
   IVirtualDatabase::Ref virtual_database;
-  IZeekServiceManager::Ref service_manager;
-  ZeekConnection::Ref zeek_connection;
 };
 
 Status ZeekAgent::create(Ref &obj) {
@@ -36,43 +32,71 @@ Status ZeekAgent::create(Ref &obj) {
 ZeekAgent::~ZeekAgent() {}
 
 Status ZeekAgent::exec(std::atomic_bool &terminate) {
-  auto status = initializeConnection();
+  IZeekServiceManager::Ref service_manager;
+  auto status = initializeServiceManager(service_manager);
   if (!status.succeeded()) {
     return status;
   }
 
-  status = initializeServiceManager();
+  status = service_manager->startServices();
   if (!status.succeeded()) {
     return status;
   }
 
-  status = d->service_manager->startServices();
-  if (!status.succeeded()) {
-    return status;
-  }
+  ZeekConnection::Ref zeek_connection;
+  QueryScheduler::Ref query_scheduler;
 
   while (!terminate) {
-    d->service_manager->checkServices();
+    service_manager->checkServices();
 
-    if (d->zeek_connection) {
-      status = d->zeek_connection->processEvents();
+    if (zeek_connection && query_scheduler) {
+      auto status = zeek_connection->processEvents();
+
+      if (!status.succeeded()) {
+        getLogger().logMessage(IZeekLogger::Severity::Error,
+                               "The connection has been lost");
+
+        zeek_connection.reset();
+
+        query_scheduler->stop();
+        query_scheduler.reset();
+
+        continue;
+      }
+
     } else {
-      status = initializeConnection();
-    }
+      auto status = initializeConnection(zeek_connection);
 
-    if (!status.succeeded()) {
-      getLogger().logMessage(
-          IZeekLogger::Severity::Error,
-          "The connection has been lost. Attempting to reconnect...");
-
-      status = initializeConnection();
       if (!status.succeeded()) {
         getLogger().logMessage(
             IZeekLogger::Severity::Error,
             "Reconnecting has failed. Retrying again later...");
 
-        std::this_thread::sleep_for(std::chrono::seconds(2));
+        std::this_thread::sleep_for(std::chrono::seconds(5));
         continue;
+      }
+
+      status = initializeQueryScheduler(query_scheduler);
+      if (!status.succeeded()) {
+        auto status =
+            Status::failure("Failed to initialize the query scheduler");
+
+        getLogger().logMessage(IZeekLogger::Severity::Error, status.message());
+        return status;
+      }
+    }
+
+    auto task_queue = zeek_connection->getTaskQueue();
+    query_scheduler->processTaskQueue(std::move(task_queue));
+
+    auto task_output_list = query_scheduler->getTaskOutputList();
+    if (!task_output_list.empty()) {
+      auto status =
+          zeek_connection->processTaskOutputList(std::move(task_output_list));
+      if (!status.succeeded()) {
+        getLogger().logMessage(IZeekLogger::Severity::Error,
+                               "Failed to process the task output list: " +
+                                   status.message());
       }
     }
   }
@@ -80,8 +104,17 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
   getLogger().logMessage(IZeekLogger::Severity::Information,
                          "Stopping all services");
 
-  d->service_manager->stopServices();
-  d->service_manager.reset();
+  if (zeek_connection) {
+    zeek_connection.reset();
+  }
+
+  if (query_scheduler) {
+    query_scheduler->stop();
+    query_scheduler.reset();
+  }
+
+  service_manager->stopServices();
+  service_manager.reset();
 
   getLogger().logMessage(IZeekLogger::Severity::Information, "Terminating");
 
@@ -99,10 +132,10 @@ ZeekAgent::ZeekAgent() : d(new PrivateData) {
   }
 }
 
-Status ZeekAgent::initializeConnection() {
-  d->zeek_connection.reset();
+Status ZeekAgent::initializeConnection(ZeekConnection::Ref &zeek_connection) {
+  zeek_connection.reset();
 
-  auto status = ZeekConnection::create(d->zeek_connection);
+  auto status = ZeekConnection::create(zeek_connection);
   if (!status.succeeded()) {
     return status;
   }
@@ -110,11 +143,34 @@ Status ZeekAgent::initializeConnection() {
   return Status::success();
 }
 
-Status ZeekAgent::initializeServiceManager() {
+Status
+ZeekAgent::initializeQueryScheduler(QueryScheduler::Ref &query_scheduler) {
+  if (query_scheduler) {
+    query_scheduler->stop();
+    query_scheduler.reset();
+  }
+
+  auto status =
+      QueryScheduler::create(query_scheduler, *d->virtual_database.get());
+  if (!status.succeeded()) {
+    return status;
+  }
+
+  status = query_scheduler->start();
+  if (!status.succeeded()) {
+    return status;
+  }
+
+  return Status::success();
+}
+
+Status
+ZeekAgent::initializeServiceManager(IZeekServiceManager::Ref &service_manager) {
   auto &virtual_database = *d->virtual_database.get();
 
-  auto status = IZeekServiceManager::create(d->service_manager,
-                                            virtual_database, getLogger());
+  auto status = IZeekServiceManager::create(service_manager, virtual_database,
+                                            getLogger());
+
   if (!status.succeeded()) {
     throw status;
   }
@@ -128,7 +184,7 @@ Status ZeekAgent::initializeServiceManager() {
       return status;
     }
 
-    status = d->service_manager->registerServiceFactory(
+    status = service_manager->registerServiceFactory(
         std::move(audisp_service_factory));
 
     if (!status.succeeded()) {

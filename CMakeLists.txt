@@ -29,6 +29,9 @@ function(zeekAgent)
     src/configuration.h
     src/configuration.cpp
 
+    src/queryscheduler.h
+    src/queryscheduler.cpp
+
     src/tables/audisp/audispservice.h
     src/tables/audisp/audispservice.cpp
 

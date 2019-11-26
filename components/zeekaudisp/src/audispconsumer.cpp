@@ -18,70 +18,6 @@
 #include <sys/un.h>
 
 namespace zeek {
-namespace {
-// clang-format off
-const std::unordered_map<int, std::string> kAddressFamilyName = {
-  { AF_UNSPEC, "AF_UNSPEC" },
-  { AF_LOCAL, "AF_LOCAL" },
-  { AF_UNIX, "AF_UNIX" },
-  { AF_FILE, "AF_FILE" },
-  { AF_INET, "AF_INET" },
-  { AF_AX25, "AF_AX25" },
-  { AF_IPX, "AF_IPX" },
-  { AF_APPLETALK, "AF_APPLETALK" },
-  { AF_NETROM, "AF_NETROM" },
-  { AF_BRIDGE, "AF_BRIDGE" },
-  { AF_ATMPVC, "AF_ATMPVC" },
-  { AF_X25, "AF_X25" },
-  { AF_INET6, "AF_INET6" },
-  { AF_ROSE, "AF_ROSE" },
-  { AF_DECnet, "AF_DECnet" },
-  { AF_NETBEUI, "AF_NETBEUI" },
-  { AF_SECURITY, "AF_SECURITY" },
-  { AF_KEY, "AF_KEY" },
-  { AF_NETLINK, "AF_NETLINK" },
-  { AF_ROUTE, "AF_ROUTE" },
-  { AF_PACKET, "AF_PACKET" },
-  { AF_ASH, "AF_ASH" },
-  { AF_ECONET, "AF_ECONET" },
-  { AF_ATMSVC, "AF_ATMSVC" },
-  { AF_RDS, "AF_RDS" },
-  { AF_SNA, "AF_SNA" },
-  { AF_IRDA, "AF_IRDA" },
-  { AF_PPPOX, "AF_PPPOX" },
-  { AF_WANPIPE, "AF_WANPIPE" },
-  { AF_LLC, "AF_LLC" },
-  { AF_IB, "AF_IB" },
-  { AF_MPLS, "AF_MPLS" },
-  { AF_CAN, "AF_CAN" },
-  { AF_TIPC, "AF_TIPC" },
-  { AF_BLUETOOTH, "AF_BLUETOOTH" },
-  { AF_IUCV, "AF_IUCV" },
-  { AF_RXRPC, "AF_RXRPC" },
-  { AF_ISDN, "AF_ISDN" },
-  { AF_PHONET, "AF_PHONET" },
-  { AF_IEEE802154, "AF_IEEE802154" },
-  { AF_CAIF, "AF_CAIF" },
-  { AF_ALG, "AF_ALG" },
-  { AF_NFC, "AF_NFC" },
-  { AF_VSOCK, "AF_VSOCK" },
-  { AF_KCM, "AF_KCM" },
-  { AF_QIPCRTR, "AF_QIPCRTR" },
-  { AF_SMC, "AF_SMC" },
-  { AF_MAX, "AF_MAX" }
-};
-// clang-format on
-
-std::string getAddressFamilyName(int family) {
-  auto it = kAddressFamilyName.find(family);
-  if (it == kAddressFamilyName.end()) {
-    return std::string();
-  }
-
-  return it->second;
-}
-} // namespace
-
 struct AudispConsumer::PrivateData final {
   IAudispProducer::Ref audisp_producer;
   IAuparseInterface::Ref auparse_interface;
@@ -617,7 +553,7 @@ Status AudispConsumer::parseSockaddrRecord(SockaddrRecordData &data,
     struct sockaddr_in addr {};
     std::memcpy(&addr, buffer.data(), sizeof(addr));
 
-    output.family = getAddressFamilyName(addr.sin_family);
+    output.family = static_cast<std::int64_t>(addr.sin_family);
     output.port = static_cast<std::int64_t>(htons(addr.sin_port));
 
     auto numeric_address = htonl(addr.sin_addr.s_addr);
@@ -641,7 +577,7 @@ Status AudispConsumer::parseSockaddrRecord(SockaddrRecordData &data,
     struct sockaddr_in6 addr {};
     std::memcpy(&addr, buffer.data(), sizeof(addr));
 
-    output.family = getAddressFamilyName(addr.sin6_family);
+    output.family = static_cast<std::int64_t>(addr.sin6_family);
     output.port = static_cast<std::int64_t>(htons(addr.sin6_port));
 
     std::stringstream str_stream;
@@ -662,7 +598,7 @@ Status AudispConsumer::parseSockaddrRecord(SockaddrRecordData &data,
     struct sockaddr_un addr {};
     std::memcpy(&addr, buffer.data(), sizeof(addr));
 
-    output.family = getAddressFamilyName(addr.sun_family);
+    output.family = static_cast<std::int64_t>(addr.sun_family);
     output.address = addr.sun_path;
 
     break;

@@ -46,7 +46,7 @@ public:
   using PathRecordData = std::vector<PathRecord>;
 
   struct SockaddrRecordData final {
-    std::string family;
+    std::int64_t family{0};
     std::int64_t port{0};
     std::string address;
   };

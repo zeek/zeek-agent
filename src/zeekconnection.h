@@ -1,6 +1,9 @@
 #pragma once
 
+#include "queryscheduler.h"
+
 #include <memory>
+#include <optional>
 
 #include <broker/broker.hh>
 
@@ -21,6 +24,9 @@ public:
   Status leaveGroup(const std::string &name);
 
   Status processEvents();
+  QueryScheduler::TaskQueue getTaskQueue();
+
+  Status processTaskOutputList(QueryScheduler::TaskOutputList task_output_list);
 
   ZeekConnection(const ZeekConnection &) = delete;
   ZeekConnection &operator=(const ZeekConnection &) = delete;
@@ -34,6 +40,7 @@ private:
 
   using StatusEventList = std::vector<broker::sc>;
   Status getStatusEvents(StatusEventList &status_event_list);
+
   Status waitForActivity(bool &ready);
 
 public:
@@ -42,14 +49,18 @@ public:
   static const std::string BrokerTopic_PRE_INDIVIDUALS;
   static const std::string BrokerTopic_PRE_GROUPS;
   static const std::string BrokerTopic_PRE_CUSTOMS;
-
   static const std::string BrokerEvent_HOST_NEW;
-  static const std::string BrokerEvent_HOST_JOIN;
-  static const std::string BrokerEvent_HOST_LEAVE;
   static const std::string BrokerEvent_HOST_EXECUTE;
-  static const std::string BrokerEvent_HOST_SUBSCRIBE;
-  static const std::string BrokerEvent_HOST_UNSUBSCRIBE;
 
   static std::string getHostIdentifier();
+
+  static Status scheduledTaskFromZeekEvent(QueryScheduler::Task &task,
+                                           const broker::zeek::Event &event);
+
+  static Status oneShotTaskFromZeekEvent(QueryScheduler::Task &task,
+                                         const broker::zeek::Event &event);
+
+  static Status taskFromZeekEvent(QueryScheduler::Task &task,
+                                  const broker::zeek::Event &event);
 };
 } // namespace zeek

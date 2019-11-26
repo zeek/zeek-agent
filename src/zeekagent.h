@@ -1,10 +1,12 @@
 #pragma once
 
+#include "zeekconnection.h"
+
 #include <atomic>
 #include <memory>
 
 #include <zeek/ivirtualdatabase.h>
-#include <zeek/status.h>
+#include <zeek/izeekservicemanager.h>
 
 namespace zeek {
 class ZeekAgent final {
@@ -28,8 +30,9 @@ protected:
   ZeekAgent();
 
 private:
-  Status initializeConnection();
-  Status initializeServiceManager();
+  Status initializeConnection(ZeekConnection::Ref &zeek_connection);
+  Status initializeQueryScheduler(QueryScheduler::Ref &query_scheduler);
+  Status initializeServiceManager(IZeekServiceManager::Ref &service_manager);
 
   Status startServices();
   void stopServices();

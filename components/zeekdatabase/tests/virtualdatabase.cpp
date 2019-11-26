@@ -18,12 +18,12 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
       REQUIRE(status.succeeded());
 
       THEN("the new virtual table can be queried") {
-        IVirtualTable::RowList row_list;
+        IVirtualDatabase::QueryOutput query_output;
         auto status =
-            virtual_database->query(row_list, "SELECT * FROM TestTable;");
+            virtual_database->query(query_output, "SELECT * FROM TestTable;");
 
         REQUIRE(status.succeeded());
-        REQUIRE(!row_list.empty());
+        REQUIRE(!query_output.empty());
       }
     }
 
@@ -59,23 +59,23 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
     }
 
     WHEN("querying an invalid table") {
-      IVirtualTable::RowList row_list;
+      IVirtualDatabase::QueryOutput query_output;
 
       // clang-format off
-      row_list.push_back(
+      query_output.push_back(
         {
-          { "dummy_value", "dummy_value" },
-          { "dummy_value2", "dummy_value2" }
+          { "column1", "dummy_value" },
+          { "column2", "dummy_value2" }
         }
       );
       // clang-format on
 
-      auto status =
-          virtual_database->query(row_list, "SELECT * FROM InvalidTableName;");
+      auto status = virtual_database->query(query_output,
+                                            "SELECT * FROM InvalidTableName;");
 
-      THEN("an error is generated and no results are returned") {
+      THEN("an error is generated and no output is returned") {
         REQUIRE(!status.succeeded());
-        REQUIRE(row_list.empty());
+        REQUIRE(query_output.empty());
       }
     }
 
@@ -88,38 +88,36 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
       auto status = virtual_database->registerTable(test_table);
       REQUIRE(status.succeeded());
 
-      IVirtualTable::RowList row_list;
-      status = virtual_database->query(row_list, "SELECT * FROM TestTable;");
+      IVirtualDatabase::QueryOutput query_output;
+      status = virtual_database->query(
+          query_output, "SELECT integer, string FROM TestTable;");
 
       THEN("the correct rows are returned") {
         REQUIRE(status.succeeded());
-        REQUIRE(row_list.size() == kRowCount);
+        REQUIRE(query_output.size() == kRowCount);
 
-        for (std::size_t i = 0U; i < row_list.size(); ++i) {
-          const auto &current_row = row_list.at(i);
+        for (std::size_t i = 0U; i < query_output.size(); ++i) {
+          const auto &current_row = query_output.at(i);
+          REQUIRE(current_row.size() == 2U);
 
-          auto integer_field_it = current_row.find("integer");
-          REQUIRE(integer_field_it != current_row.end());
+          const auto &integer_column = current_row.at(0U);
+          REQUIRE(integer_column.name == "integer");
+          REQUIRE(integer_column.data.has_value());
 
-          auto string_field_it = current_row.find("string");
-          REQUIRE(string_field_it != current_row.end());
+          auto variant_value = integer_column.data.value();
+          REQUIRE(std::holds_alternative<std::int64_t>(variant_value));
 
-          const auto &integer_optional = integer_field_it->second;
-          REQUIRE(integer_optional.has_value());
-
-          const auto &string_optional = string_field_it->second;
-          REQUIRE(string_optional.has_value());
-
-          const auto &integer_variant = integer_optional.value();
-          REQUIRE(integer_variant.index() == 0U);
-
-          const auto &string_variant = string_optional.value();
-          REQUIRE(string_variant.index() == 1U);
-
-          const auto &integer_value = std::get<0U>(integer_variant);
+          auto integer_value = std::get<std::int64_t>(variant_value);
           CHECK(integer_value == i);
 
-          const auto &string_value = std::get<1U>(string_variant);
+          const auto &string_column = current_row.at(1U);
+          REQUIRE(string_column.name == "string");
+          REQUIRE(string_column.data.has_value());
+
+          variant_value = string_column.data.value();
+          REQUIRE(std::holds_alternative<std::string>(variant_value));
+
+          auto string_value = std::get<std::string>(variant_value);
           CHECK(string_value == std::to_string(i));
         }
       }
@@ -134,13 +132,13 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
       auto status = virtual_database->registerTable(test_table);
       REQUIRE(status.succeeded());
 
-      IVirtualTable::RowList row_list;
-
-      status = virtual_database->query(row_list, "SELECT * FROM TestTable;");
+      IVirtualDatabase::QueryOutput query_output;
+      status =
+          virtual_database->query(query_output, "SELECT * FROM TestTable;");
 
       THEN("no rows are returned") {
         REQUIRE(status.succeeded());
-        REQUIRE(row_list.size() == kRowCount);
+        REQUIRE(query_output.size() == kRowCount);
       }
     }
   }

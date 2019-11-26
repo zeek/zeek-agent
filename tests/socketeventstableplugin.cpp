@@ -38,7 +38,7 @@ SCENARIO("Row generation in the socket_events table",
       // Sockaddr data
       {
         {
-          "AF_INET",
+          2,
           443,
           "127.0.0.1"
         }
@@ -61,11 +61,11 @@ SCENARIO("Row generation in the socket_events table",
           { "path", "/usr/bin/curl" },
           { "fd", 16 },
           { "auid", 1000 },
-          { "success", "true" },
-          { "family", "AF_INET" },
-          { "local_address", { } },
+          { "success", 1 },
+          { "family", 2 },
+          { "local_address", { "" } },
           { "remote_address", "127.0.0.1" },
-          { "local_port", { } },
+          { "local_port", { 0 } },
           { "remote_port", 443 }
         };
         // clang-format on
@@ -110,7 +110,7 @@ SCENARIO("Row generation in the socket_events table",
       // Sockaddr data
       {
         {
-          "AF_INET",
+          2,
           8080,
           "0.0.0.0"
         }
@@ -132,12 +132,12 @@ SCENARIO("Row generation in the socket_events table",
           { "path", "/usr/bin/curl" },
           { "fd", 16 },
           { "auid", 1000 },
-          { "success", "true" },
-          { "family", "AF_INET" },
+          { "success", 1 },
+          { "family", 2 },
           { "local_address", "0.0.0.0" },
-          { "remote_address", { } },
+          { "remote_address", { "" } },
           { "local_port", 8080 },
-          { "remote_port", { } }
+          { "remote_port", { 0 } }
         };
         // clang-format on
 

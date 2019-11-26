@@ -50,7 +50,7 @@ ProcessEventsTablePlugin::schema() const {
     { "owner_gid", IVirtualTable::ColumnType::Integer },
 
     // Present in the AUDIT_EXECVE record(s)
-    { "argc", IVirtualTable::ColumnType::Integer },
+    { "cmdline_size", IVirtualTable::ColumnType::Integer },
     { "cmdline", IVirtualTable::ColumnType::String },
 
     // Present in the AUDIT_PATH record(s)
@@ -150,7 +150,7 @@ Status ProcessEventsTablePlugin::generateRow(
   auto current_timestamp = std::chrono::duration_cast<std::chrono::seconds>(
       std::chrono::system_clock::now().time_since_epoch());
 
-  row["time"] = std::to_string(current_timestamp.count());
+  row["time"] = current_timestamp.count();
   row["syscall"] = syscall_name;
   row["pid"] = syscall_data.process_id;
   row["parent"] = syscall_data.parent_process_id;
@@ -180,8 +180,6 @@ Status ProcessEventsTablePlugin::generateRow(
     }
 
     const auto &execve_data = audit_event.execve_data.value();
-    row["argc"] = execve_data.argc;
-
     std::string command_line;
     for (const auto &parameter : execve_data.argument_list) {
       if (!command_line.empty()) {
@@ -192,6 +190,7 @@ Status ProcessEventsTablePlugin::generateRow(
     }
 
     row["cmdline"] = command_line;
+    row["cmdline_size"] = command_line.size();
 
     const auto &path_record = audit_event.path_data.value();
     const auto &last_path_entry = path_record.front();
@@ -206,13 +205,19 @@ Status ProcessEventsTablePlugin::generateRow(
     row["cwd"] = cwd_data;
 
   } else {
-    row["owner_uid"] = {};
-    row["owner_gid"] = {};
-    row["argc"] = {};
-    row["cmdline"] = {};
-    row["path"] = {};
-    row["mode"] = {};
-    row["cwd"] = {};
+    // TODO: The correct approach is to set these fields to {} and
+    // leave them empty. This will make the IVirtualDatabase actually
+    // return NULL values when returning this row.
+    //
+    // The Zeek scripts we have do not support 'none' as a data type yet, so
+    // we'll just set these values to either zero or an empty string
+    row["owner_uid"] = {0};
+    row["owner_gid"] = {0};
+    row["cmdline"] = {""};
+    row["cmdline_size"] = {0};
+    row["path"] = {""};
+    row["mode"] = {0};
+    row["cwd"] = {""};
   }
 
   return Status::success();

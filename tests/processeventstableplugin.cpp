@@ -86,7 +86,7 @@ SCENARIO("Row generation in the process_events table",
           { "egid", kExecveAuditEvent.syscall_data.egid },
           { "owner_uid", 0 },
           { "owner_gid", 0 },
-          { "argc", 2 },
+          { "cmdline_size", 24 },
           { "cmdline", "\"-c\" \"echo hello world!\"" },
           { "path", "/usr/bin/bash" },
           { "mode", 0755 },
@@ -95,6 +95,7 @@ SCENARIO("Row generation in the process_events table",
         // clang-format on
 
         REQUIRE(row.size() == kExpectedColumnList.size() + 1);
+
         REQUIRE(row.count("time") != 0U);
         REQUIRE(row.at("time").has_value());
 
@@ -153,13 +154,13 @@ SCENARIO("Row generation in the process_events table",
           { "euid", kForkAuditEvent.syscall_data.euid },
           { "gid", kForkAuditEvent.syscall_data.gid },
           { "egid", kForkAuditEvent.syscall_data.egid },
-          { "owner_uid", { } },
-          { "owner_gid", { } },
-          { "argc", { } },
-          { "cmdline", { } },
-          { "path", { } },
-          { "mode", { } },
-          { "cwd", { } }
+          { "owner_uid", { 0 } },
+          { "owner_gid", { 0 } },
+          { "cmdline_size", { 0 } },
+          { "cmdline", { "" } },
+          { "path", { "" } },
+          { "mode", { 0 } },
+          { "cwd", { "" } }
         };
         // clang-format on
 
@@ -223,13 +224,13 @@ SCENARIO("Row generation in the process_events table",
           { "euid", kVForkAuditEvent.syscall_data.euid },
           { "gid", kVForkAuditEvent.syscall_data.gid },
           { "egid", kVForkAuditEvent.syscall_data.egid },
-          { "owner_uid", { } },
-          { "owner_gid", { } },
-          { "argc", { } },
-          { "cmdline", { } },
-          { "path", { } },
-          { "mode", { } },
-          { "cwd", { } }
+          { "owner_uid", { 0 } },
+          { "owner_gid", { 0 } },
+          { "cmdline_size", { 0 } },
+          { "cmdline", { "" } },
+          { "path", { "" } },
+          { "mode", { 0 } },
+          { "cwd", { "" } }
         };
         // clang-format on
 
@@ -293,13 +294,13 @@ SCENARIO("Row generation in the process_events table",
           { "euid", kCloneAuditEvent.syscall_data.euid },
           { "gid", kCloneAuditEvent.syscall_data.gid },
           { "egid", kCloneAuditEvent.syscall_data.egid },
-          { "owner_uid", { } },
-          { "owner_gid", { } },
-          { "argc", { } },
-          { "cmdline", { } },
-          { "path", { } },
-          { "mode", { } },
-          { "cwd", { } }
+          { "owner_uid", { 0 } },
+          { "owner_gid", { 0 } },
+          { "cmdline_size", { 0 } },
+          { "cmdline", { "" } },
+          { "path", { "" } },
+          { "mode", { 0 } },
+          { "cwd", { "" } }
         };
         // clang-format on
 
