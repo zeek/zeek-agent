@@ -107,7 +107,7 @@ Status ZeekLoggerTablePlugin::generateRow(Row &row,
   auto current_timestamp = std::chrono::duration_cast<std::chrono::seconds>(
       std::chrono::system_clock::now().time_since_epoch());
 
-  row["time"] = std::to_string(current_timestamp.count());
+  row["time"] = current_timestamp.count();
   row["severity"] = severity_name;
   row["message"] = message;
 

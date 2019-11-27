@@ -4,7 +4,6 @@
 #include "zeekconnection.h"
 
 #include <chrono>
-#include <iostream>
 #include <thread>
 
 namespace zeek {

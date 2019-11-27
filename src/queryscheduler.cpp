@@ -3,7 +3,6 @@
 
 #include <algorithm>
 #include <atomic>
-#include <iostream>
 #include <mutex>
 #include <thread>
 
@@ -62,7 +61,7 @@ Status QueryScheduler::create(Ref &obj, IVirtualDatabase &virtual_database) {
   }
 }
 
-QueryScheduler::~QueryScheduler() {}
+QueryScheduler::~QueryScheduler() { stop(); }
 
 void QueryScheduler::processTaskQueue(TaskQueue task_queue) {
   std::lock_guard<std::mutex> lock(d->task_queue_mutex);
@@ -209,6 +208,10 @@ Status QueryScheduler::start() {
 }
 
 void QueryScheduler::stop() {
+  if (!d->thread) {
+    return;
+  }
+
   d->terminate = true;
 
   d->thread->join();
@@ -220,20 +223,18 @@ QueryScheduler::QueryScheduler(IVirtualDatabase &virtual_database)
 
 Status QueryScheduler::executeTask(const Task &task) {
   TaskOutput task_output;
-  task_output.task = task;
+  task_output.response_topic = task.response_topic;
+  task_output.response_event = task.response_event;
+  task_output.update_type = task.update_type;
+  task_output.cookie = task.cookie;
 
   auto status = d->virtual_database.query(task_output.query_output, task.query);
   if (!status.succeeded()) {
     return Status::failure(status.message() + ". Query: " + task.query);
   }
 
-  std::cout << task.query << std::endl;
-  std::cout << "Returned " << task_output.query_output.size() << " results\n"
-            << std::endl;
-
   {
     std::lock_guard<std::mutex> lock(d->task_output_list_mutex);
-
     d->task_output_list.push_back(std::move(task_output));
   }
 

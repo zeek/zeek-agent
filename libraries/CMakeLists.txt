@@ -12,6 +12,7 @@ function(zeekAgentLibraries)
   add_subdirectory("rapidjson")
   add_subdirectory("broker")
   add_subdirectory("openssl")
+  add_subdirectory("xxhash")
 endfunction()
 
 zeekAgentLibraries()

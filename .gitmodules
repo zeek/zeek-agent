@@ -10,3 +10,6 @@
 [submodule "libraries/broker/src"]
 	path = libraries/broker/src
 	url = https://github.com/zeek/broker
+[submodule "libraries/xxhash/src"]
+	path = libraries/xxhash/src
+	url = https://github.com/Cyan4973/xxHash

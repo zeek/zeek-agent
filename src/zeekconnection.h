@@ -42,15 +42,35 @@ private:
   Status getStatusEvents(StatusEventList &status_event_list);
 
   Status waitForActivity(bool &ready);
+  Status processTaskOutput(const QueryScheduler::TaskOutput &task_output);
+
+  void publishTaskOutput(const std::string &trigger,
+                         const std::string &response_topic,
+                         const std::string &response_event,
+                         const std::string &cookie,
+                         const IVirtualDatabase::QueryOutput &query_output);
 
 public:
-  static const std::string BrokerTopic_ALL;
-  static const std::string BrokerTopic_ANNOUNCE;
-  static const std::string BrokerTopic_PRE_INDIVIDUALS;
-  static const std::string BrokerTopic_PRE_GROUPS;
-  static const std::string BrokerTopic_PRE_CUSTOMS;
-  static const std::string BrokerEvent_HOST_NEW;
-  static const std::string BrokerEvent_HOST_EXECUTE;
+  using DifferentialData =
+      std::unordered_map<std::uint64_t, IVirtualDatabase::OutputRow>;
+
+  using DifferentialContext = std::unordered_map<std::string, DifferentialData>;
+
+  struct DifferentialOutput final {
+    IVirtualDatabase::QueryOutput added_row_list;
+    IVirtualDatabase::QueryOutput removed_row_list;
+  };
+
+  static Status computeQueryOutputHash(std::uint64_t &hash,
+                                       const IVirtualDatabase::OutputRow &row);
+
+  static std::string computeQueryID(const std::string &response_topic,
+                                    const std::string &response_event,
+                                    const std::string &cookie);
+
+  static Status
+  computeDifferentials(DifferentialContext &context, DifferentialOutput &output,
+                       const QueryScheduler::TaskOutput &task_output);
 
   static std::string getHostIdentifier();
 

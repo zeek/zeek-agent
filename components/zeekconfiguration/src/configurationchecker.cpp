@@ -1,7 +1,5 @@
 #include "configurationchecker.h"
 
-#include <iostream>
-
 #include <rapidjson/pointer.h>
 
 namespace zeek {

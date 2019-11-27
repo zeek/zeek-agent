@@ -33,7 +33,12 @@ public:
   using TaskQueue = std::vector<Task>;
 
   struct TaskOutput final {
-    Task task;
+    std::string response_topic;
+    std::string response_event;
+
+    std::string cookie;
+    std::optional<Task::UpdateType> update_type;
+
     IVirtualDatabase::QueryOutput query_output;
   };
 

@@ -70,6 +70,7 @@ void ZeekLogger::logMessage(Severity severity, const std::string &message) {
 
       auto status =
           logger_table_impl.appendMessage(Severity::Error, error_message);
+
       std::cerr << error_message << "\n";
 
       d->log_file = {};

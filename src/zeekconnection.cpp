@@ -1,6 +1,7 @@
 #include "zeekconnection.h"
 #include "configuration.h"
 #include "logger.h"
+#include "uniquexxh64state.h"
 
 #include <unordered_map>
 
@@ -14,11 +15,15 @@ namespace zeek {
 namespace {
 const std::string kHostSubscribeEvent{"osquery::host_subscribe"};
 const std::string kHostUnsubscribeEvent{"osquery::host_unsubscribe"};
-
 const std::string kHostJoinEvent{"osquery::host_join"};
 const std::string kHostLeaveEvent{"osquery::host_leave"};
-
 const std::string kHostExecuteEvent{"osquery::host_execute"};
+
+const std::string kBrokerTopic_ALL{"/bro/osquery/hosts"};
+const std::string kBrokerTopic_ANNOUNCE{"/bro/osquery/host_announce"};
+const std::string kBrokerTopic_PRE_INDIVIDUALS{"/bro/osquery/host/"};
+const std::string kBrokerTopic_PRE_GROUPS{"/bro/osquery/group/"};
+const std::string kBrokerEvent_HOST_NEW{"osquery::host_new"};
 
 std::string getSystemHostname() {
   std::vector<char> buffer(1024);
@@ -64,6 +69,7 @@ struct ZeekConnection::PrivateData final {
   std::vector<std::string> joined_group_list;
 
   QueryScheduler::TaskQueue task_queue;
+  DifferentialContext differential_context;
 };
 
 Status ZeekConnection::create(Ref &obj) {
@@ -94,7 +100,7 @@ Status ZeekConnection::joinGroup(const std::string &name) {
                            name);
   }
 
-  auto status = createSubscription(BrokerTopic_PRE_GROUPS + name);
+  auto status = createSubscription(kBrokerTopic_PRE_GROUPS + name);
   if (!status.succeeded()) {
     throw status;
   }
@@ -114,7 +120,7 @@ Status ZeekConnection::leaveGroup(const std::string &name) {
     return Status::failure("The following group has not been joined: " + name);
   }
 
-  auto status = destroySubscription(BrokerTopic_PRE_GROUPS + name);
+  auto status = destroySubscription(kBrokerTopic_PRE_GROUPS + name);
   if (!status.succeeded()) {
     return status;
   }
@@ -189,12 +195,22 @@ Status ZeekConnection::processEvents() {
 
       } else {
         QueryScheduler::Task pending_task;
+
         status = taskFromZeekEvent(pending_task, event);
         if (!status.succeeded()) {
           getLogger().logMessage(IZeekLogger::Severity::Error,
                                  status.message());
 
         } else {
+          if (pending_task.type ==
+              QueryScheduler::Task::Type::RemoveScheduledQuery) {
+            auto query_id = computeQueryID(pending_task.response_topic,
+                                           pending_task.response_event,
+                                           pending_task.cookie);
+
+            d->differential_context.erase(query_id);
+          }
+
           d->task_queue.push_back(std::move(pending_task));
         }
       }
@@ -211,53 +227,94 @@ QueryScheduler::TaskQueue ZeekConnection::getTaskQueue() {
   return output;
 }
 
-Status ZeekConnection::processTaskOutputList(
-    QueryScheduler::TaskOutputList task_output_list) {
-  for (const auto &task_output : task_output_list) {
-    // Skip one-shot queries for now
-    if (task_output.task.type == QueryScheduler::Task::Type::ExecuteQuery) {
+void ZeekConnection::publishTaskOutput(
+    const std::string &trigger, const std::string &response_topic,
+    const std::string &response_event, const std::string &cookie,
+    const IVirtualDatabase::QueryOutput &query_output) {
 
-      continue;
+  // clang-format off
+  broker::vector message_header(
+    {
+      broker::data(getHostIdentifier()),
+      broker::data(broker::data(broker::enum_value{trigger})),
+      broker::data(cookie)
     }
+  );
+  // clang-format on
 
-    const auto &current_task = task_output.task;
+  for (const auto &row : query_output) {
+    broker::vector message_data = {broker::data(message_header)};
 
-    // Hard-code what the previous code called "trigger". We are querying
-    // event-based tables now, and differentials make no sense in this case
-    std::string trigger{"osquery::ADD"};
+    for (const auto &column : row) {
+      broker::data column_value = {};
 
-    broker::vector message_header(
-        {broker::data(getHostIdentifier()),
-         broker::data(broker::data(broker::enum_value{trigger})),
-         broker::data(current_task.cookie)});
+      if (column.data.has_value()) {
+        const auto &column_variant = column.data.value();
 
-    for (const auto &row : task_output.query_output) {
-      broker::vector message_data = {broker::data(message_header)};
-
-      for (const auto &column : row) {
-        if (column.data.has_value()) {
-          const auto &column_variant = column.data.value();
-
-          if (std::holds_alternative<std::string>(column_variant)) {
-            message_data.push_back(
-                broker::data(std::get<std::string>(column_variant)));
-          } else {
-            message_data.push_back(
-                broker::data(std::get<std::int64_t>(column_variant)));
-          }
+        if (std::holds_alternative<std::string>(column_variant)) {
+          const auto &string_value = std::get<std::string>(column_variant);
+          column_value = broker::data(string_value);
 
         } else {
-          // TODO: Add support for NULL
-          message_data.push_back(broker::data());
+          auto integer_value = std::get<std::int64_t>(column_variant);
+          column_value = broker::data(integer_value);
         }
+
+      } else {
+        getLogger().logMessage(IZeekLogger::Severity::Warning,
+                               "Returning a NULL column. This may not be "
+                               "correctly supported by Zeek");
+
+        column_value = broker::data();
       }
 
-      // clang-format off
-      d->broker_endpoint->publish(
-        current_task.response_topic,
-        broker::zeek::Event(current_task.response_event, message_data)
-      );
-      // clang-format on
+      message_data.push_back(std::move(column_value));
+    }
+
+    // clang-format off
+    d->broker_endpoint->publish(
+      response_topic,
+      broker::zeek::Event(response_event, message_data)
+    );
+    // clang-format on
+  }
+}
+
+Status ZeekConnection::processTaskOutput(
+    const QueryScheduler::TaskOutput &task_output) {
+
+  if (task_output.update_type.has_value()) {
+    DifferentialOutput differential_output;
+    auto status = computeDifferentials(d->differential_context,
+                                       differential_output, task_output);
+    if (!status.succeeded()) {
+      return status;
+    }
+
+    publishTaskOutput("osquery::ADD", task_output.response_topic,
+                      task_output.response_event, task_output.cookie,
+                      differential_output.added_row_list);
+
+    publishTaskOutput("osquery::REMOVE", task_output.response_topic,
+                      task_output.response_event, task_output.cookie,
+                      differential_output.removed_row_list);
+
+  } else {
+    publishTaskOutput("osquery::SNAPSHOT", task_output.response_topic,
+                      task_output.response_event, task_output.cookie,
+                      task_output.query_output);
+  }
+
+  return Status::success();
+}
+
+Status ZeekConnection::processTaskOutputList(
+    QueryScheduler::TaskOutputList task_output_list) {
+
+  for (const auto &task_output : task_output_list) {
+    auto status = processTaskOutput(task_output);
+    if (!status.succeeded()) {
+      return status;
     }
   }
 
@@ -268,7 +325,6 @@ Status ZeekConnection::waitForActivity(bool &ready) {
   ready = false;
 
   std::vector<pollfd> poll_fd_list;
-
   for (const auto &subscriber_p : d->subscriber_map) {
     const auto &subscriber = subscriber_p.second;
 
@@ -351,13 +407,13 @@ ZeekConnection::ZeekConnection()
                          "Successfully connected to " + server_address + ":" +
                              std::to_string(server_port));
 
-  auto status = createSubscription(BrokerTopic_ALL);
+  auto status = createSubscription(kBrokerTopic_ALL);
   if (!status.succeeded()) {
     throw status;
   }
 
   status =
-      createSubscription(BrokerTopic_PRE_INDIVIDUALS + getHostIdentifier());
+      createSubscription(kBrokerTopic_PRE_INDIVIDUALS + getHostIdentifier());
 
   if (!status.succeeded()) {
     throw status;
@@ -378,7 +434,7 @@ ZeekConnection::ZeekConnection()
 
   // clang-format off
   broker::zeek::Event message(
-    BrokerEvent_HOST_NEW,
+    kBrokerEvent_HOST_NEW,
 
     {
       broker::data(caf::to_string(d->broker_endpoint->node_id())),
@@ -388,7 +444,7 @@ ZeekConnection::ZeekConnection()
   );
   // clang-format on
 
-  d->broker_endpoint->publish(BrokerTopic_ANNOUNCE, message);
+  d->broker_endpoint->publish(kBrokerTopic_ANNOUNCE, message);
 }
 
 broker::configuration ZeekConnection::getBrokerConfiguration() {
@@ -455,6 +511,152 @@ Status ZeekConnection::getStatusEvents(StatusEventList &status_event_list) {
       return Status::failure(message);
     }
   }
+
+  return Status::success();
+}
+
+Status
+ZeekConnection::computeQueryOutputHash(std::uint64_t &hash,
+                                       const IVirtualDatabase::OutputRow &row) {
+
+  hash = 0U;
+
+  auto xxh64_state = createXXH64State();
+  if (!xxh64_state) {
+    return Status::failure("Failed to create the XXH64 state");
+  }
+
+  for (const auto &column_value : row) {
+    auto error = XXH64_update(xxh64_state.get(), column_value.name.c_str(),
+                              column_value.name.size());
+
+    if (error == XXH_ERROR) {
+      return Status::failure("Failed to compute the row hash");
+    }
+
+    if (!column_value.data.has_value()) {
+      static const std::string kNullColumnValue{"<NULL>"};
+
+      error = XXH64_update(xxh64_state.get(), column_value.name.c_str(),
+                           column_value.name.size());
+
+    } else {
+      const auto &var = column_value.data.value();
+
+      if (std::holds_alternative<std::string>(var)) {
+        const auto &string_value = std::get<std::string>(var);
+
+        error = XXH64_update(xxh64_state.get(), string_value.c_str(),
+                             string_value.size());
+
+      } else if (std::holds_alternative<std::int64_t>(var)) {
+        auto integer_value = std::get<std::int64_t>(var);
+
+        error = XXH64_update(xxh64_state.get(), &integer_value,
+                             sizeof(integer_value));
+
+      } else {
+        return Status::failure("Invalid column type");
+      }
+    }
+
+    if (error == XXH_ERROR) {
+      return Status::failure("Failed to compute the row hash");
+    }
+  }
+
+  hash = XXH64_digest(xxh64_state.get());
+  return Status::success();
+}
+
+std::string ZeekConnection::computeQueryID(const std::string &response_topic,
+                                           const std::string &response_event,
+                                           const std::string &cookie) {
+  return response_topic + response_event + cookie;
+}
+
+Status ZeekConnection::computeDifferentials(
+    DifferentialContext &context, DifferentialOutput &output,
+    const QueryScheduler::TaskOutput &task_output) {
+
+  output = {};
+
+  // Generate new differential data for this query output
+  DifferentialData differential_data;
+  for (const auto &row : task_output.query_output) {
+    std::uint64_t row_hash = 0U;
+    auto status = computeQueryOutputHash(row_hash, row);
+    if (!status.succeeded()) {
+      return status;
+    }
+
+    differential_data.insert({row_hash, row});
+  }
+
+  // Look for the old differential data
+  auto query_id =
+      computeQueryID(task_output.response_topic, task_output.response_event,
+                     task_output.cookie);
+
+  auto old_differential_data_it = context.find(query_id);
+  if (old_differential_data_it == context.end()) {
+    context.insert({query_id, std::move(differential_data)});
+    output.added_row_list = task_output.query_output;
+
+    return Status::success();
+  }
+
+  auto &old_differential_data = old_differential_data_it->second;
+
+  // Determine what kind of updates we are required to process
+  bool process_rows_added{false};
+  bool process_rows_removed{false};
+
+  if (task_output.update_type.has_value()) {
+    auto update_type = task_output.update_type.value();
+
+    if (update_type == QueryScheduler::Task::UpdateType::Added) {
+      process_rows_added = true;
+
+    } else if (update_type == QueryScheduler::Task::UpdateType::Removed) {
+      process_rows_removed = true;
+
+    } else if (update_type == QueryScheduler::Task::UpdateType::Both) {
+      process_rows_added = true;
+      process_rows_removed = true;
+
+    } else {
+      return Status::failure("Invalid task update type");
+    }
+  }
+
+  // Put new rows in the added row list
+  if (process_rows_added) {
+    for (const auto &new_diff_p : differential_data) {
+      const auto &new_row_hash = new_diff_p.first;
+      const auto &new_row_output = new_diff_p.second;
+
+      if (old_differential_data.find(new_row_hash) ==
+          old_differential_data.end()) {
+        output.added_row_list.push_back(new_row_output);
+      }
+    }
+  }
+
+  // Put the rows we lost in the removed row list
+  if (process_rows_removed) {
+    for (const auto &old_diff_p : old_differential_data) {
+      const auto &old_row_hash = old_diff_p.first;
+      const auto &old_row_output = old_diff_p.second;
+
+      if (differential_data.find(old_row_hash) == differential_data.end()) {
+        output.removed_row_list.push_back(old_row_output);
+      }
+    }
+  }
+
+  // Update the differential data inside the context structure
+  std::swap(old_differential_data, differential_data);
 
   return Status::success();
 }
@@ -558,23 +760,4 @@ Status ZeekConnection::taskFromZeekEvent(QueryScheduler::Task &task,
     return Status::failure("Invalid event name: " + event_name);
   }
 }
-
-#define ZEEK_TOPIC_PREFIX "/bro/osquery/"
-
-const std::string ZeekConnection::BrokerTopic_ALL{ZEEK_TOPIC_PREFIX "hosts"};
-
-const std::string ZeekConnection::BrokerTopic_ANNOUNCE{ZEEK_TOPIC_PREFIX
-                                                       "host_announce"};
-
-const std::string ZeekConnection::BrokerTopic_PRE_INDIVIDUALS{ZEEK_TOPIC_PREFIX
-                                                              "host/"};
-
-const std::string ZeekConnection::BrokerTopic_PRE_GROUPS{ZEEK_TOPIC_PREFIX
-                                                         "group/"};
-
-const std::string ZeekConnection::BrokerTopic_PRE_CUSTOMS{ZEEK_TOPIC_PREFIX
-                                                          "custom/"};
-
-const std::string ZeekConnection::BrokerEvent_HOST_NEW{"osquery::host_new"};
-
 } // namespace zeek

@@ -23,6 +23,9 @@ function(zeekAgent)
     src/zeekconnection.h
     src/zeekconnection.cpp
 
+    src/uniquexxh64state.h
+    src/uniquexxh64state.cpp
+
     src/logger.h
     src/logger.cpp
 
@@ -50,6 +53,7 @@ function(zeekAgent)
     zeek_service_manager
     zeek_configuration
     thirdparty_broker
+    thirdparty_xxhash
   )
 
   target_include_directories("${PROJECT_NAME}" PRIVATE
@@ -68,6 +72,7 @@ function(zeekAgent)
 
       tests/processeventstableplugin.cpp
       tests/socketeventstableplugin.cpp
+      tests/zeekconnection.cpp
   )
 endfunction()
 
