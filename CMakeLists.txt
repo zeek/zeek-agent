@@ -49,11 +49,15 @@ function(zeekAgent)
     zeek_logger
     zeek_service_manager
     zeek_configuration
-    thirdparty_broker
+    broker
   )
 
   target_include_directories("${PROJECT_NAME}" PRIVATE
     src
+    libraries/broker/src
+    libraries/broker/src/3rdparty/caf/libcaf_core
+    ${CMAKE_CURRENT_BINARY_DIR}/libraries/broker/src
+    ${CMAKE_CURRENT_BINARY_DIR}/libraries/broker/src/caf-build/libcaf_core
   )
 
   generateZeekAgentTest(
