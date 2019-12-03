@@ -3,12 +3,12 @@
 #include <cstring>
 #include <vector>
 
-//#include <asm/unistd.h>
-#include <libaudit.h>
+#include <errno.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <libaudit_wrapper.h>
 
 namespace zeek {
 namespace {

@@ -35,6 +35,20 @@ function(generateSettingsTarget)
     cxx_std_17
   )
 
+  if(ZEEK_AGENT_ENABLE_LIBCPP)
+    target_compile_options(zeek_agent_cxx_settings INTERFACE
+      -stdlib=libc++
+    )
+
+    target_link_options(zeek_agent_cxx_settings INTERFACE
+      -stdlib=libc++
+    )
+
+    target_link_libraries(zeek_agent_cxx_settings INTERFACE
+      libc++abi.a
+    )
+  endif()
+
   configureClangSanitizers("zeek_agent_common_settings")
 endfunction()
 

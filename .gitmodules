@@ -13,3 +13,9 @@
 [submodule "libraries/xxhash/src"]
 	path = libraries/xxhash/src
 	url = https://github.com/Cyan4973/xxHash
+[submodule "libraries/audit/src"]
+	path = libraries/audit/src
+	url = https://github.com/linux-audit/audit-userspace
+[submodule "libraries/zlib/src"]
+	path = libraries/zlib/src
+	url = https://github.com/madler/zlib

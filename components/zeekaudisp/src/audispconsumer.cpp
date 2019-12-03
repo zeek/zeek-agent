@@ -11,11 +11,11 @@
 #include <unordered_map>
 
 #include <asm/unistd.h>
-#include <libaudit.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <libaudit_wrapper.h>
 
 namespace zeek {
 struct AudispConsumer::PrivateData final {

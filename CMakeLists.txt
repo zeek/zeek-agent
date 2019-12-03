@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.14)
+
+include("cmake/options.cmake")
 project("zeek-agent")
 
 include("cmake/flags.cmake")
-include("cmake/options.cmake")
 include("cmake/utils.cmake")
 include("cmake/tests.cmake")
 include("cmake/ccache.cmake")
