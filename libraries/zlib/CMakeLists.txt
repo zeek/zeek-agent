@@ -4,7 +4,7 @@ project("zlib")
 function(zeekAgentLibrariesZlib)
   set(library_root "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-  add_library(thirdparty_zlib
+  add_library(thirdparty_zlib EXCLUDE_FROM_ALL
     "${library_root}/adler32.c"
     "${library_root}/compress.c"
     "${library_root}/crc32.c"

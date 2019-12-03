@@ -7,6 +7,7 @@ endif()
 option(ZEEK_AGENT_ENABLE_TESTS "Set to ON to build the tests")
 option(ZEEK_AGENT_ENABLE_INSTALL "Set to ON to generate the install directives")
 option(ZEEK_AGENT_ENABLE_SANITIZERS "Set to ON to enable sanitizers. Only available when compiling with Clang")
+
 set(ZEEK_AGENT_TOOLCHAIN_PATH "" CACHE PATH "Toolchain path")
 
 if(NOT "${ZEEK_AGENT_TOOLCHAIN_PATH}" STREQUAL "")
@@ -27,3 +28,10 @@ else()
 endif()
 
 option(ZEEK_AGENT_ENABLE_LIBCPP "Set to ON to enable linking against libc++ and libc++abi" ${default_libcpp_option_value})
+
+if(TARGET osqueryd)
+  message(STATUS "zeek-agent: Building with osquery support; disabling the custom toolchain and enabling libc++ support")
+
+  set(ZEEK_AGENT_TOOLCHAIN_PATH "" CACHE PATH "Toolchain path" FORCE)
+  set(ZEEK_AGENT_ENABLE_LIBCPP ON CACHE BOOL "Set to ON to enable linking against libc++ and libc++abi" FORCE)
+endif()

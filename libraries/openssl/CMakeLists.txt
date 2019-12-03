@@ -4,24 +4,6 @@ project("openssl")
 include(ExternalProject)
 
 function(zeekAgentLibrariesOpenSSL)
-  if(NOT "${ZEEK_AGENT_TOOLCHAIN_PATH}" STREQUAL "")
-    buildOpensslFromSource()
-  else()
-    importExistingOpenssl()
-  endif()
-endfunction()
-
-function(importExistingOpenssl)
-  find_package(OpenSSL REQUIRED)
-
-  add_library(thirdparty_openssl INTERFACE)
-  target_link_libraries(thirdparty_openssl INTERFACE
-    OpenSSL::SSL
-    OpenSSL::Crypto
-  )
-endfunction()
-
-function(buildOpensslFromSource)
   set(openssl_version "1.1.1d")
 
   get_target_property(zlib_include_path thirdparty_zlib

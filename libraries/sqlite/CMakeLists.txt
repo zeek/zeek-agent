@@ -6,6 +6,7 @@ function(zeekAgentLibrariesSqlite)
   target_link_libraries(thirdparty_sqlite PRIVATE
     zeek_agent_c_settings
     zeek_agent_libraries_settings
+    dl
   )
 endfunction()
 

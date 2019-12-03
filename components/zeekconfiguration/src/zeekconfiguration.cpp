@@ -206,7 +206,7 @@ Status ZeekConfiguration::parseConfigurationData(Context &context,
   context = {};
 
   rapidjson::Document document;
-  document.Parse(json);
+  document.Parse(json.c_str());
 
   ConfigurationChecker::Ref config_checker;
   auto status =

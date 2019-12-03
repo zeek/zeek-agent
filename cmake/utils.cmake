@@ -46,6 +46,7 @@ function(generateSettingsTarget)
 
     target_link_libraries(zeek_agent_cxx_settings INTERFACE
       libc++abi.a
+      rt
     )
   endif()
 
