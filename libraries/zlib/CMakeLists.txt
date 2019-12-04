@@ -34,7 +34,9 @@ function(zeekAgentLibrariesZlib)
   target_include_directories(thirdparty_zlib
     PRIVATE
       "${library_root}"
+  )
 
+  target_include_directories(thirdparty_zlib
     SYSTEM INTERFACE
       "${library_root}"
   )

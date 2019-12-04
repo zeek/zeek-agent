@@ -57,6 +57,12 @@ function(zeekAgent)
     thirdparty_xxhash
   )
 
+  if(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+    target_link_libraries("${PROJECT_NAME}" PRIVATE
+      zeek_osquery_interface
+    )
+  endif()
+
   target_include_directories("${PROJECT_NAME}" PRIVATE
     src
   )

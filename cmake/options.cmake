@@ -34,4 +34,8 @@ if(TARGET osqueryd)
 
   set(ZEEK_AGENT_TOOLCHAIN_PATH "" CACHE PATH "Toolchain path" FORCE)
   set(ZEEK_AGENT_ENABLE_LIBCPP ON CACHE BOOL "Set to ON to enable linking against libc++ and libc++abi" FORCE)
+
+  set(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT ON)
+else()
+  set(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT OFF)
 endif()

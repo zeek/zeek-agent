@@ -25,6 +25,12 @@ function(generateSettingsTarget)
     ${common_compilation_flags}
   )
 
+  if(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+    target_compile_definitions(zeek_agent_common_settings INTERFACE
+      ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT
+    )
+  endif()
+
   add_library(zeek_agent_c_settings INTERFACE)
   target_link_libraries(zeek_agent_c_settings INTERFACE zeek_agent_common_settings)
 

@@ -7,6 +7,10 @@ function(zeekComponents)
   add_subdirectory("zeeklogger")
   add_subdirectory("zeekservicemanager")
   add_subdirectory("zeekconfiguration")
+
+  if(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+    add_subdirectory("zeekosqueryinterface")
+  endif()
 endfunction()
 
 zeekComponents()

@@ -14,13 +14,13 @@ class IVirtualTable {
 public:
   using Ref = std::shared_ptr<IVirtualTable>;
 
-  using Variant = std::variant<std::int64_t, std::string>;
+  using Variant = std::variant<std::int64_t, std::string, double>;
   using OptionalVariant = std::optional<Variant>;
 
   using Row = std::map<std::string, OptionalVariant>;
   using RowList = std::vector<Row>;
 
-  enum class ColumnType { Integer, String };
+  enum class ColumnType { Integer, String, Double };
   using Schema = std::map<std::string, ColumnType>;
 
   virtual ~IVirtualTable() = default;

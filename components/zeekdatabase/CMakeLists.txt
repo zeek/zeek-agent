@@ -18,6 +18,9 @@ function(zeekAgentComponentsDatabase)
 
   target_include_directories("${PROJECT_NAME}"
     PRIVATE include
+  )
+
+  target_include_directories("${PROJECT_NAME}"
     SYSTEM INTERFACE include
   )
 

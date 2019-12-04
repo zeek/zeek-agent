@@ -245,6 +245,8 @@ void ZeekConnection::publishTaskOutput(
   for (const auto &row : query_output) {
     broker::vector message_data = {broker::data(message_header)};
 
+    bool skip_row = false;
+
     for (const auto &column : row) {
       broker::data column_value = {};
 
@@ -255,9 +257,19 @@ void ZeekConnection::publishTaskOutput(
           const auto &string_value = std::get<std::string>(column_variant);
           column_value = broker::data(string_value);
 
-        } else {
+        } else if (std::holds_alternative<std::int64_t>(column_variant)) {
           auto integer_value = std::get<std::int64_t>(column_variant);
           column_value = broker::data(integer_value);
+
+        } else if (std::holds_alternative<double>(column_variant)) {
+          auto double_value = std::get<double>(column_variant);
+          column_value = broker::data(double_value);
+
+        } else {
+          getLogger().logMessage(IZeekLogger::Severity::Error,
+                                 "Invalid type received");
+          skip_row = true;
+          break;
         }
 
       } else {
@@ -271,12 +283,14 @@ void ZeekConnection::publishTaskOutput(
       message_data.push_back(std::move(column_value));
     }
 
-    // clang-format off
-    d->broker_endpoint->publish(
-      response_topic,
-      broker::zeek::Event(response_event, message_data)
-    );
-    // clang-format on
+    if (!skip_row) {
+      // clang-format off
+      d->broker_endpoint->publish(
+        response_topic,
+        broker::zeek::Event(response_event, message_data)
+      );
+      // clang-format on
+    }
   }
 }
 

@@ -136,7 +136,7 @@ TEST_CASE("Checking configuration files with constraints",
     }
   )"";
 
-  document.Parse(kSimpleJson);
+  document.Parse(kSimpleJson.c_str());
   status = ConfigurationChecker::validateWithConstraints(kSimpleConstraintSet,
                                                          document);
 
@@ -167,7 +167,7 @@ TEST_CASE("Checking configuration files with constraints",
     }
   )"";
 
-  document.Parse(kArrayJson);
+  document.Parse(kArrayJson.c_str());
   status = ConfigurationChecker::validateWithConstraints(kArrayConstraintSet,
                                                          document);
 
@@ -190,7 +190,7 @@ TEST_CASE("Checking configuration files with constraints",
     }
   )"";
 
-  document.Parse(kInvalidIntegerJson);
+  document.Parse(kInvalidIntegerJson.c_str());
   status = ConfigurationChecker::validateWithConstraints(kSimpleConstraintSet,
                                                          document);
 
@@ -203,7 +203,7 @@ TEST_CASE("Checking configuration files with constraints",
     }
   )"";
 
-  document.Parse(kRootItemsJson);
+  document.Parse(kRootItemsJson.c_str());
   status = ConfigurationChecker::validateWithConstraints(
       kRootItemsConstraintSet, document);
 

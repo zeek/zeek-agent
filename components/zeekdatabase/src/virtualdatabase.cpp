@@ -32,6 +32,10 @@ std::vector<std::string> VirtualDatabase::virtualTableList() const {
 }
 
 Status VirtualDatabase::registerTable(IVirtualTable::Ref table) {
+  if (table->name().empty()) {
+    return Status::failure("Empty table name");
+  }
+
   if (d->registered_module_list.count(table->name()) != 0U) {
     return Status::failure("A table with the same is already registered");
   }
@@ -175,7 +179,12 @@ Status VirtualDatabase::validateTableName(const std::string &name) {
 Status
 VirtualDatabase::validateTableSchema(const IVirtualTable::Schema &schema) {
   static const std::unordered_set<IVirtualTable::ColumnType> kValidColumnTypes =
-      {IVirtualTable::ColumnType::Integer, IVirtualTable::ColumnType::String};
+      {IVirtualTable::ColumnType::Integer, IVirtualTable::ColumnType::String,
+       IVirtualTable::ColumnType::Double};
+
+  if (schema.empty()) {
+    return Status::failure("Table schema is empty");
+  }
 
   for (const auto &p : schema) {
     const auto &column_name = p.first;

@@ -167,6 +167,9 @@ Status QueryScheduler::processEvents() {
     if (task_timestamp <= current_timestamp) {
       task_timestamp = current_timestamp + task.interval.value();
 
+      getLogger().logMessage(IZeekLogger::Severity::Debug,
+                             "Running scheduled query: " + task.query);
+
       auto status = executeTask(task);
       if (!status.succeeded()) {
         getLogger().logMessage(

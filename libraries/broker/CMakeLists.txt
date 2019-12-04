@@ -151,9 +151,12 @@ function(generateActorFramework)
     PRIVATE
       "${caf_core_root}"
       "${CMAKE_CURRENT_SOURCE_DIR}/generated"
+  )
 
+  target_include_directories(thirdparty_caf_core
     SYSTEM INTERFACE
       "${caf_core_root}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/generated"
   )
 
   target_link_libraries(thirdparty_caf_core
@@ -211,7 +214,9 @@ function(generateActorFramework)
     PRIVATE
       "${caf_io_root}"
       "${CMAKE_CURRENT_SOURCE_DIR}/generated"
+  )
 
+  target_include_directories(thirdparty_caf_io
     SYSTEM INTERFACE
       "${caf_io_root}"
   )
@@ -239,7 +244,9 @@ function(generateActorFramework)
     PRIVATE
       "${caf_openssl_root}"
       "${CMAKE_CURRENT_SOURCE_DIR}/generated"
+  )
 
+  target_include_directories(thirdparty_caf_openssl
     SYSTEM INTERFACE
       "${caf_openssl_root}"
   )
@@ -315,16 +322,21 @@ function(generateBroker)
   )
 
   target_include_directories(thirdparty_broker PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/generated"
     "${library_root}/src/detail"
+    "${library_root}"
   )
 
-  target_include_directories(thirdparty_broker SYSTEM PUBLIC
+  target_include_directories(thirdparty_broker SYSTEM INTERFACE
     "${CMAKE_CURRENT_SOURCE_DIR}/generated"
     "${library_root}"
   )
 
+  # Also attempt to turn off the make_unique reimplementation that upstream
+  # has added inside the std namespace
   target_compile_definitions(thirdparty_broker PRIVATE
     BROKER_LINUX=1
+    BROKER_DETAIL_MAKE_UNIQUE_HH
   )
 endfunction()
 

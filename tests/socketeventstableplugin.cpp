@@ -57,16 +57,16 @@ SCENARIO("Row generation in the socket_events table",
         // clang-format off
         static ExpectedValueList kExpectedConnectColumnList = {
           { "action", "connect" },
-          { "pid", 38031 },
+          { "pid", static_cast<std::int64_t>(38031) },
           { "path", "/usr/bin/curl" },
-          { "fd", 16 },
-          { "auid", 1000 },
-          { "success", 1 },
-          { "family", 2 },
+          { "fd", static_cast<std::int64_t>(16) },
+          { "auid", static_cast<std::int64_t>(1000) },
+          { "success", static_cast<std::int64_t>(1) },
+          { "family", static_cast<std::int64_t>(2) },
           { "local_address", { "" } },
           { "remote_address", "127.0.0.1" },
-          { "local_port", { 0 } },
-          { "remote_port", 443 }
+          { "local_port", { static_cast<std::int64_t>(0) } },
+          { "remote_port", static_cast<std::int64_t>(443) }
         };
         // clang-format on
 
@@ -128,16 +128,16 @@ SCENARIO("Row generation in the socket_events table",
         // clang-format off
         static ExpectedValueList kExpectedBindColumnList = {
           { "action", "bind" },
-          { "pid", 38031 },
+          { "pid", static_cast<std::int64_t>(38031) },
           { "path", "/usr/bin/curl" },
-          { "fd", 16 },
-          { "auid", 1000 },
-          { "success", 1 },
-          { "family", 2 },
+          { "fd", static_cast<std::int64_t>(16) },
+          { "auid", static_cast<std::int64_t>(1000) },
+          { "success", static_cast<std::int64_t>(1) },
+          { "family", static_cast<std::int64_t>(2) },
           { "local_address", "0.0.0.0" },
           { "remote_address", { "" } },
-          { "local_port", 8080 },
-          { "remote_port", { 0 } }
+          { "local_port", static_cast<std::int64_t>(8080) },
+          { "remote_port", { static_cast<std::int64_t>(0) } }
         };
         // clang-format on
 

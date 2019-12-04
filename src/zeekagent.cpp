@@ -3,6 +3,10 @@
 #include "tables/audisp/audispservice.h"
 #include "zeekconnection.h"
 
+#if defined(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+#include <zeek/iosqueryinterface.h>
+#endif
+
 #include <chrono>
 #include <thread>
 
@@ -44,6 +48,23 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
 
   ZeekConnection::Ref zeek_connection;
   QueryScheduler::Ref query_scheduler;
+
+#if defined(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+  IOsqueryInterface::Ref osquery_interface;
+  status = IOsqueryInterface::create(osquery_interface,
+                                     *d->virtual_database.get(), getLogger());
+  if (!status.succeeded()) {
+    return status;
+  }
+
+  getLogger().logMessage(IZeekLogger::Severity::Information,
+                         "Starting the osquery integration");
+
+  status = osquery_interface->start();
+  if (!status.succeeded()) {
+    return status;
+  }
+#endif
 
   while (!terminate) {
     service_manager->checkServices();
@@ -107,6 +128,11 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
     zeek_connection.reset();
   }
 
+#if defined(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+  osquery_interface->stop();
+  osquery_interface.reset();
+#endif
+
   if (query_scheduler) {
     query_scheduler->stop();
     query_scheduler.reset();
@@ -151,6 +177,7 @@ ZeekAgent::initializeQueryScheduler(QueryScheduler::Ref &query_scheduler) {
 
   auto status =
       QueryScheduler::create(query_scheduler, *d->virtual_database.get());
+
   if (!status.succeeded()) {
     return status;
   }

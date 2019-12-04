@@ -150,7 +150,9 @@ Status ProcessEventsTablePlugin::generateRow(
   auto current_timestamp = std::chrono::duration_cast<std::chrono::seconds>(
       std::chrono::system_clock::now().time_since_epoch());
 
-  row["time"] = current_timestamp.count();
+  auto time_value = static_cast<std::int64_t>(current_timestamp.count());
+
+  row["time"] = time_value;
   row["syscall"] = syscall_name;
   row["pid"] = syscall_data.process_id;
   row["parent"] = syscall_data.parent_process_id;
@@ -190,7 +192,7 @@ Status ProcessEventsTablePlugin::generateRow(
     }
 
     row["cmdline"] = command_line;
-    row["cmdline_size"] = command_line.size();
+    row["cmdline_size"] = static_cast<std::int64_t>(command_line.size());
 
     const auto &path_record = audit_event.path_data.value();
     const auto &last_path_entry = path_record.front();
@@ -211,12 +213,14 @@ Status ProcessEventsTablePlugin::generateRow(
     //
     // The Zeek scripts we have do not support 'none' as a data type yet, so
     // we'll just set these values to either zero or an empty string
-    row["owner_uid"] = {0};
-    row["owner_gid"] = {0};
+    std::int64_t null_value{0};
+
+    row["owner_uid"] = {null_value};
+    row["owner_gid"] = {null_value};
     row["cmdline"] = {""};
-    row["cmdline_size"] = {0};
+    row["cmdline_size"] = {null_value};
     row["path"] = {""};
-    row["mode"] = {0};
+    row["mode"] = {null_value};
     row["cwd"] = {""};
   }
 

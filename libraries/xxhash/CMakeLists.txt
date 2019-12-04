@@ -21,14 +21,12 @@ function(zeekAgentLibrariesXxhash)
     PRIVATE
       "${library_root}"
       "${CMAKE_CURRENT_BINARY_DIR}/include"
+  )
 
+  target_include_directories(thirdparty_xxhash
     SYSTEM INTERFACE
       "${CMAKE_CURRENT_BINARY_DIR}/include"
   )
-
-  #target_compile_definitions(thirdparty_xxhash PUBLIC
-  #  XXH_INLINE_ALL
-  #)
 
   target_link_libraries(thirdparty_xxhash INTERFACE
     zeek_agent_c_settings

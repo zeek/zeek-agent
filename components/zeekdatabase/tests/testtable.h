@@ -41,7 +41,7 @@ public:
 
     for (auto i = 0U; i < row_count; ++i) {
       Row row = {};
-      row.insert({"integer", i});
+      row.insert({"integer", static_cast<std::int64_t>(i)});
       row.insert({"string", std::to_string(i)});
       row_list.push_back(row);
     }

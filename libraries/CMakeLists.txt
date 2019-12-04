@@ -22,25 +22,22 @@ function(zeekAgentLibraries)
     add_subdirectory("rapidjson")
   endif()
 
-  if(NOT TARGET thirdparty_zlib)
-    # zlib is marked as EXCLUDE_FROM_ALL and will only be build
-    # if the OpenSSL library is build from source
-    add_subdirectory("zlib")
-  endif()
-
   # OpenSSL is only built if we are building zeek-agent alone with
   # the custom toolchain
-  if(NOT TARGET thirdparty_openssl AND NOT "${ZEEK_AGENT_TOOLCHAIN_PATH}" STREQUAL "")
-    add_subdirectory("openssl")
+  if(NOT ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+    if(NOT "${ZEEK_AGENT_TOOLCHAIN_PATH}" STREQUAL "")
+      add_subdirectory("zlib")
+      add_subdirectory("openssl")
 
-  else()
-    find_package(OpenSSL REQUIRED)
+    else()
+      find_package(OpenSSL REQUIRED)
 
-    add_library(thirdparty_openssl INTERFACE)
-    target_link_libraries(thirdparty_openssl INTERFACE
-      OpenSSL::SSL
-      OpenSSL::Crypto
-    )
+      add_library(thirdparty_openssl INTERFACE)
+      target_link_libraries(thirdparty_openssl INTERFACE
+        OpenSSL::SSL
+        OpenSSL::Crypto
+      )
+    endif()
   endif()
 endfunction()
 

@@ -129,16 +129,20 @@ Status SocketEventsTablePlugin::generateRow(
   row["path"] = syscall_data.exe;
 
   auto fd = std::strtoll(syscall_data.a0.c_str(), nullptr, 16U);
-  row["fd"] = fd;
+  row["fd"] = static_cast<std::int64_t>(fd);
 
   row["auid"] = syscall_data.auid;
-  row["success"] = audit_event.syscall_data.succeeded ? 1 : 0;
+
+  row["success"] =
+      static_cast<std::int64_t>(audit_event.syscall_data.succeeded ? 1 : 0);
+
   row["family"] = sockaddr_data.family;
 
   // TODO: remote_address/remote_port and local_address/local_port
   // should be set to {} when not used (so that SQLite will return
   // a NULL value). This is however not yet supported by the Zeek
   // scripts, so we'll just return empty strings
+  std::int64_t null_value{0};
 
   if (audit_event.syscall_data.type ==
       IAudispConsumer::SyscallRecordData::Type::Bind) {
@@ -147,11 +151,11 @@ Status SocketEventsTablePlugin::generateRow(
     row["local_port"] = sockaddr_data.port;
 
     row["remote_address"] = {""};
-    row["remote_port"] = {0};
+    row["remote_port"] = {null_value};
 
   } else {
     row["local_address"] = {""};
-    row["local_port"] = {0};
+    row["local_port"] = {null_value};
 
     row["remote_address"] = sockaddr_data.address;
     row["remote_port"] = sockaddr_data.port;

@@ -276,6 +276,7 @@ int VirtualTableModule::onTableColumn(sqlite3_vtab_cursor *cursor,
   if (std::holds_alternative<std::int64_t>(current_column_value_data)) {
     const auto &current_column_data =
         std::get<std::int64_t>(current_column_value_data);
+
     sqlite3_result_int(context, current_column_data);
 
   } else if (std::holds_alternative<std::string>(current_column_value_data)) {
@@ -284,6 +285,12 @@ int VirtualTableModule::onTableColumn(sqlite3_vtab_cursor *cursor,
 
     sqlite3_result_text(context, current_column_data.c_str(),
                         current_column_data.size(), SQLITE_STATIC);
+
+  } else if (std::holds_alternative<double>(current_column_value_data)) {
+    const auto &current_column_data =
+        std::get<double>(current_column_value_data);
+
+    sqlite3_result_double(context, current_column_data);
 
   } else {
     std::cerr << "Invalid column type\n";
