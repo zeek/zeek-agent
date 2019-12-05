@@ -1,30 +1,32 @@
 # zeek-agent
 
+The Zeek Agent is an endpoint monitoring tool that reports socket and process events to a [Zeek](https://zeek.org) server instance. Event data is captured from Audit using the Unix domain socket plugin that comes with Audisp, and is then presented as a SQL database using SQLite virtual tables. It is optionally possible to enable osquery support, allowing Zeek to access all its non-evented tables.
+
+## Build types
+
+The Zeek agent can be built in three different configurations, with or without [osquery](https://github.com/osquery/osquery) support.
+
+1. Using the system compiler, generating binaries that will probably only work on the distribution used to build the release.
+2. With the [osquery-toolchain](https://github.com/osquery/osquery-toolchain), generating binaries that will work on any distribution shipping a glibc version that is greater than or equal to 2.12 (CentOS 6/Ubuntu 16.04 and above).
+3. Under the osquery source tree, enabling support for all the non-evented tables such as `processes` and `interfaces`. This will also automatically enable the osquery-toolchain.
+
+When generating redistributable packages, it is best to use build types 2 and 3. Distribution maintainers who wish to use system dependencies (when possible) may prefer going with option 1.
+
 ## Building from source
 
-For users that are already familiar with CMake, the project should be easy to build once the required dependencies have been installed and the repository has been cloned with all the submodules. No special steps are required to configure or build the binaries.
+**Introduction**
+
+For users that are already familiar with CMake, the project should be easy to build once the required dependencies have been installed and the repository has been cloned with all the submodules. No special steps are required for the configure and build steps.
 
 Project options have been grouped under the `ZEEK` prefix and will show up in configuration tools such as `ccmake` and `cmake-gui`.
 
-It is also possible to run the following script to configure, build, test and generate the packages: `scripts/ci_entry_point.sh`
+It is also possible to run the following script to configure, build, test and generate the packages: `scripts/build_release.sh`
 
-**1 - Supported systems**
+**Dependencies**
 
-For development and generating releases, Ubuntu >= 18.04 is currently the only supported distribution
+When building with the system compiler, the following packages are needed: `clang`, `libssl-dev`. There are no special requirements when building with the osquery-toolchain. For the osquery-enabled build, Flex and Bison should be installed.
 
-For users, releases will work on any distribution post Ubuntu 16/CentOS 6 as long as the binaries have been generated with the osquery-toolchain.
-
-**2 - Dependencies**
-* clang
-* libauparse-dev
-* libaudit-dev
-* libssl-dev
-
-On Ubuntu/Debian-based distributions, the required packages can be installed with the following command:
-
-`sudo apt install clang libauparse-dev libaudit-dev libssl-dev`
-
-**2 - Obtaining the source code**
+**Obtaining the source code**
 
 Clone the repository along with all the necessary submodules: `git clone https://github.com/zeek/osquery-extension --recursive`
 
@@ -35,14 +37,27 @@ git submodule sync --recursive
 git submodule update --init --recursive
 ```
 
-**3 - Building the project**
+**Selecting the build type**
+
+*Note: Only add the parameters from one of the three alternatives!*
+
+Standalone build (i.e. no osquery support)
+
+1. When using the system compiler, clang is recommended. Add the `-DCMAKE_CXX_COMPILER:STRING=clang++ -DCMAKE_C_COMPILER:STRING=clang` parameters to the cmake configuration command.
+2. When the osquery-toolchain is used instead, add the toolchain path: `-DZEEK_AGENT_TOOLCHAIN_PATH:PATH=/path/to/toolchain`
+
+Full build (i.e. with support for osquery tables)
+
+3. Create a symbolic link of the Zeek agent repository inside the `external` folder under the osquery source tree.
+
+**Building the project**
 
 1. Create and enter the build folder: `mkdir build && cd build`
-2. Configure the project: `cmake -DCMAKE_CXX_COMPILER:STRING=clang++ -DCMAKE_C_COMPILER:STRING=clang -DCMAKE_BUILD_TYPE:STRING=Release -DZEEK_AGENT_ENABLE_INSTALL:BOOL=ON /path/to/source/folder`
+2. Configure the project: `cmake <additional parameters, see the point above> -DCMAKE_BUILD_TYPE:STRING=Release -DZEEK_AGENT_ENABLE_INSTALL:BOOL=ON /path/to/source/folder`
 3. Build the binaries: `cmake --build . -j $(nproc)`
 4. Run the tests: `cmake --build . --target zeek_agent_tests -j $(nproc)`
 5. Install the binaries (**not yet supported**): `cmake --build . --target install -j $(nproc)`
-6. Create packages (**not yet supported**): `cmake --build . --target package -j $(nproc)`
+6. Create the packages (**not yet supported**): `cmake --build . --target package -j $(nproc)`
 
 ## Configuration
 
@@ -81,18 +96,3 @@ Please note that the `authentication` object should be omitted for now, as the Z
 **3 - Installing Zeek and the Zeek scripts**
 
 Follow the install instructions found at the following repository: [osquery framework](https://github.com/zeek/osquery-framework#prerequisites)
-
-## Generating distro-independent binaries
-
-It is possible to build the project using the [osquery toolchain](https://github.com/osquery/osquery-toolchain) in order to create binaries that are compatible with any distribution past Ubuntu 16 and CentOS 6.
-
-1. Download the tarball package from the release page
-2. Extract it
-3. Update the path: `export PATH="/path/to/osquery-toolchain/usr/bin:${PATH}"`
-
-Set the right compiler to CMake by passing the following additional parameters:
-
-```
--DCMAKE_C_COMPILER:PATH=/path/to/osquery-toolchain/usr/bin/clang
--DCMAKE_CXX_COMPILER:PATH=/path/to/osquery-toolchain/usr/bin/clang++
-```

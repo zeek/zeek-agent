@@ -1,0 +1,68 @@
+name: Linux
+
+on: [push]
+
+jobs:
+  system_compiler:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Cache (ccache)
+      uses: actions/cache@v1.0.3
+      with:
+        path: build/ccache
+        key: system_compiler_ccache
+
+    - name: Cache (downloads)
+      uses: actions/cache@v1.0.3
+      with:
+        path: build/downloads
+        key: system_compiler_downloads
+    
+    - name: Build
+      run: ./scripts/build_release.sh --system
+
+  portable:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Cache (ccache)
+      uses: actions/cache@v1.0.3
+      with:
+        path: build/ccache
+        key: portable_ccache
+
+    - name: Cache (downloads)
+      uses: actions/cache@v1.0.3
+      with:
+        path: build/downloads
+        key: portable_downloads
+    
+    - name: Build
+      run: ./scripts/build_release.sh --portable
+
+  osquery:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Cache (ccache)
+      uses: actions/cache@v1.0.3
+      with:
+        path: build/ccache
+        key: osquery_ccache
+
+    - name: Cache (downloads)
+      uses: actions/cache@v1.0.3
+      with:
+        path: build/downloads
+        key: osquery_downloads
+    
+    - name: Build
+      run: ./scripts/build_release.sh --portable-osquery
+
