@@ -28,6 +28,8 @@ function(zeekAgentComponentsAudisp)
     SYSTEM INTERFACE include
   )
 
+  find_package(Threads REQUIRED)
+
   target_link_libraries("${PROJECT_NAME}"
     PRIVATE
       zeek_agent_cxx_settings
@@ -35,6 +37,8 @@ function(zeekAgentComponentsAudisp)
     PUBLIC
       zeek_utils
       thirdparty_audit
+      ${CMAKE_THREAD_LIBS_INIT}
+      ${CMAKE_DL_LIBS}
   )
 
   generateZeekAgentTest(
