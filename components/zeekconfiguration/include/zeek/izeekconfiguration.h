@@ -22,6 +22,8 @@ public:
   virtual const std::string &clientCertificate() const = 0;
   virtual const std::string &clientKey() const = 0;
 
+  virtual const std::string &osqueryExtensionsSocket() const = 0;
+
   IZeekConfiguration(const IZeekConfiguration &) = delete;
   IZeekConfiguration &operator=(const IZeekConfiguration &) = delete;
 };

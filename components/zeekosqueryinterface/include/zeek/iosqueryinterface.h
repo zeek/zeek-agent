@@ -10,7 +10,8 @@ class IOsqueryInterface {
 public:
   using Ref = std::unique_ptr<IOsqueryInterface>;
   static Status create(Ref &ref, IVirtualDatabase &virtual_database,
-                       IZeekLogger &logger);
+                       IZeekLogger &logger,
+                       const std::string &extensions_socket);
 
   IOsqueryInterface() = default;
   virtual ~IOsqueryInterface() = default;

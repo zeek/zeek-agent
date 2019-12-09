@@ -17,6 +17,8 @@ public:
   virtual const std::string &clientCertificate() const override;
   virtual const std::string &clientKey() const override;
 
+  virtual const std::string &osqueryExtensionsSocket() const override;
+
 protected:
   ZeekConfiguration(IVirtualDatabase &virtual_database,
                     const std::string &configuration_file_path);
@@ -40,6 +42,7 @@ public:
     std::string certificate_authority;
     std::string client_certificate;
     std::string client_key;
+    std::string osquery_extensions_socket;
   };
 
   static Status parseConfigurationData(Context &context,

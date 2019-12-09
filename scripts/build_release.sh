@@ -210,7 +210,7 @@ executeCommand() {
 }
 
 printUsage() {
-  printf "Usage:\n\tbuild_release.sh [--system | --portable | --portable-with-osquery]\n\n"
+  printf "Usage:\n\tbuild_release.sh [--system | --portable | --portable-osquery]\n\n"
 }
 
 main $@

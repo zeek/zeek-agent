@@ -89,6 +89,19 @@ const ConfigurationChecker::Constraints kConfigurationConstraints = {
       false
     }
   },
+
+#if defined(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+  {
+    "osquery_extensions_socket",
+
+    {
+      ConfigurationChecker::MemberConstraint::Type::String,
+      false,
+      "",
+      true
+    }
+  }
+#endif
 };
 // clang-format on
 } // namespace
@@ -137,6 +150,10 @@ const std::string &ZeekConfiguration::clientCertificate() const {
 
 const std::string &ZeekConfiguration::clientKey() const {
   return d->context.client_key;
+}
+
+const std::string &ZeekConfiguration::osqueryExtensionsSocket() const {
+  return d->context.osquery_extensions_socket;
 }
 
 ZeekConfiguration::ZeekConfiguration(IVirtualDatabase &virtual_database,
@@ -222,6 +239,13 @@ Status ZeekConfiguration::parseConfigurationData(Context &context,
   }
 
   context.server_address = document["server_address"].GetString();
+
+#if defined(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+  context.osquery_extensions_socket =
+      document["osquery_extensions_socket"].GetString();
+#else
+  context.osquery_extensions_socket = "";
+#endif
 
   context.server_port =
       static_cast<std::uint16_t>(document["server_port"].GetInt());

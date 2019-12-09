@@ -11,7 +11,8 @@ public:
   virtual void stop() override;
 
 protected:
-  OsqueryInterface(IVirtualDatabase &virtual_database, IZeekLogger &logger);
+  OsqueryInterface(IVirtualDatabase &virtual_database, IZeekLogger &logger,
+                   const std::string &extensions_socket);
 
 private:
   struct PrivateData;

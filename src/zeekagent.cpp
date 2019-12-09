@@ -1,4 +1,5 @@
 #include "zeekagent.h"
+#include "configuration.h"
 #include "logger.h"
 #include "tables/audisp/audispservice.h"
 #include "zeekconnection.h"
@@ -50,9 +51,13 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
   QueryScheduler::Ref query_scheduler;
 
 #if defined(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+  auto osquery_socket = getConfig().osqueryExtensionsSocket();
+
   IOsqueryInterface::Ref osquery_interface;
-  status = IOsqueryInterface::create(osquery_interface,
-                                     *d->virtual_database.get(), getLogger());
+  status =
+      IOsqueryInterface::create(osquery_interface, *d->virtual_database.get(),
+                                getLogger(), osquery_socket);
+
   if (!status.succeeded()) {
     return status;
   }

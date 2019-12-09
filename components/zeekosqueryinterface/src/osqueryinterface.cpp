@@ -12,6 +12,7 @@ struct OsqueryInterface::PrivateData final {
 
   IVirtualDatabase &virtual_database;
   IZeekLogger &logger;
+  std::string extensions_socket;
 
   std::vector<std::string> argv_contents;
   std::vector<char *> argv_pointer_array;
@@ -34,7 +35,7 @@ Status OsqueryInterface::start() {
   d->argv_contents.push_back("zeek-agent");
   d->argv_pointer_array.push_back(&d->argv_contents.back()[0]);
 
-  d->argv_contents.push_back("--extensions_socket=/var/osquery/ext");
+  d->argv_contents.push_back("--extensions_socket=" + d->extensions_socket);
   d->argv_pointer_array.push_back(&d->argv_contents.back()[0]);
 
   d->argv_pointer_array.push_back(nullptr);
@@ -58,6 +59,15 @@ Status OsqueryInterface::start() {
   }
 
   for (const auto &table_name : table_list) {
+    auto events_substr_it = table_name.find("events");
+    if (events_substr_it != std::string::npos) {
+      d->logger.logMessage(IZeekLogger::Severity::Information,
+                           "The following table will not be mirrored: " +
+                               table_name);
+
+      continue;
+    }
+
     IVirtualTable::Ref table_ref;
     status = OsqueryTablePlugin::create(table_ref, table_name, d->logger);
     if (!status.succeeded()) {
@@ -112,15 +122,21 @@ void OsqueryInterface::stop() {
 }
 
 OsqueryInterface::OsqueryInterface(IVirtualDatabase &virtual_database,
-                                   IZeekLogger &logger)
-    : d(new PrivateData(virtual_database, logger)) {}
+                                   IZeekLogger &logger,
+                                   const std::string &extensions_socket)
+    : d(new PrivateData(virtual_database, logger)) {
+
+  d->extensions_socket = extensions_socket;
+}
 
 Status IOsqueryInterface::create(Ref &ref, IVirtualDatabase &virtual_database,
-                                 IZeekLogger &logger) {
+                                 IZeekLogger &logger,
+                                 const std::string &extensions_socket) {
   try {
     ref.reset();
 
-    auto ptr = new OsqueryInterface(virtual_database, logger);
+    auto ptr =
+        new OsqueryInterface(virtual_database, logger, extensions_socket);
     ref.reset(ptr);
 
     return Status::success();
