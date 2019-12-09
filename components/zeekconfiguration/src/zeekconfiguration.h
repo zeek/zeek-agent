@@ -18,6 +18,7 @@ public:
   virtual const std::string &clientKey() const override;
 
   virtual const std::string &osqueryExtensionsSocket() const override;
+  virtual std::size_t maxQueuedRowCount() const override;
 
 protected:
   ZeekConfiguration(IVirtualDatabase &virtual_database,
@@ -43,6 +44,7 @@ public:
     std::string client_certificate;
     std::string client_key;
     std::string osquery_extensions_socket;
+    std::size_t max_queued_row_count;
   };
 
   static Status parseConfigurationData(Context &context,

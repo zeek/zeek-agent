@@ -88,7 +88,8 @@ Status ConfigurationChecker::validateWithConstraints(
       break;
     }
 
-    case MemberConstraint::Type::UInt16: {
+    case MemberConstraint::Type::UInt16:
+    case MemberConstraint::Type::UInt32: {
       if (member_constraint.array) {
         for (auto i = 0U; i < member_ptr->Size(); ++i) {
           const auto &current_entry = (*member_ptr)[i];
@@ -96,8 +97,19 @@ Status ConfigurationChecker::validateWithConstraints(
             break;
           }
 
-          auto value = current_entry.GetInt();
-          if (value < 0 || value > std::numeric_limits<std::uint16_t>::max()) {
+          auto value = current_entry.GetInt64();
+          if (value < 0) {
+            break;
+          }
+
+          bool invalid_value{true};
+          if (member_constraint.type == MemberConstraint::Type::UInt16) {
+            invalid_value = (value > std::numeric_limits<std::uint16_t>::max());
+          } else {
+            invalid_value = (value > std::numeric_limits<std::uint32_t>::max());
+          }
+
+          if (invalid_value) {
             break;
           }
         }
@@ -109,8 +121,19 @@ Status ConfigurationChecker::validateWithConstraints(
           break;
         }
 
-        auto value = member_ptr->GetInt();
-        if (value < 0 || value > std::numeric_limits<std::uint16_t>::max()) {
+        auto value = member_ptr->GetInt64();
+        if (value < 0) {
+          break;
+        }
+
+        bool invalid_value{true};
+        if (member_constraint.type == MemberConstraint::Type::UInt16) {
+          invalid_value = (value > std::numeric_limits<std::uint16_t>::max());
+        } else {
+          invalid_value = (value > std::numeric_limits<std::uint32_t>::max());
+        }
+
+        if (invalid_value) {
           break;
         }
 

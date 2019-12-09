@@ -79,6 +79,8 @@ A sample configuration follows:
   "server_address": "127.0.0.1",
   "server_port": 9999,
   "log_folder": "/var/log/zeek",
+  "max_queued_row_count": 10000,
+  "osquery_extensions_socket": "/var/osquery/osquery.em",
 
   "group_list": [
     "group0",

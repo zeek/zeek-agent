@@ -22,13 +22,15 @@ TEST_CASE("Reading configuration files", "[ZeekConfiguration]") {
       "client_key": "/dev/null"
     },
 
-    "osquery_extensions_socket": "/test/path"
+    "osquery_extensions_socket": "/test/path",
+    "max_queued_row_count": 1337
   }
   )"";
 
   ZeekConfiguration::Context context;
   auto status =
       ZeekConfiguration::parseConfigurationData(context, kTestConfiguration);
+
   REQUIRE(status.succeeded());
 
   REQUIRE(context.server_address == "127.0.0.1");
@@ -49,5 +51,7 @@ TEST_CASE("Reading configuration files", "[ZeekConfiguration]") {
 #else
   REQUIRE(context.osquery_extensions_socket == "");
 #endif
+
+  REQUIRE(context.max_queued_row_count == 1337U);
 }
 } // namespace zeek

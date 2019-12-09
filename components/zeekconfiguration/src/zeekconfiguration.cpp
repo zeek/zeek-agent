@@ -90,6 +90,17 @@ const ConfigurationChecker::Constraints kConfigurationConstraints = {
     }
   },
 
+  {
+    "max_queued_row_count",
+
+    {
+      ConfigurationChecker::MemberConstraint::Type::UInt32,
+      false,
+      "",
+      false
+    }
+  },
+
 #if defined(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
   {
     "osquery_extensions_socket",
@@ -154,6 +165,10 @@ const std::string &ZeekConfiguration::clientKey() const {
 
 const std::string &ZeekConfiguration::osqueryExtensionsSocket() const {
   return d->context.osquery_extensions_socket;
+}
+
+std::size_t ZeekConfiguration::maxQueuedRowCount() const {
+  return d->context.max_queued_row_count;
 }
 
 ZeekConfiguration::ZeekConfiguration(IVirtualDatabase &virtual_database,
@@ -257,6 +272,14 @@ Status ZeekConfiguration::parseConfigurationData(Context &context,
   for (auto i = 0U; i < group_list.Size(); ++i) {
     const auto &group = group_list[i].GetString();
     context.group_list.push_back(group);
+  }
+
+  if (document.HasMember("max_queued_row_count")) {
+    context.max_queued_row_count =
+        static_cast<std::uint32_t>(document["max_queued_row_count"].GetInt());
+
+  } else {
+    context.max_queued_row_count = 50000U;
   }
 
   if (document.HasMember("authentication")) {

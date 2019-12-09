@@ -1,11 +1,15 @@
 #include "tables/audisp/processeventstableplugin.h"
+#include "configuration.h"
+#include "logger.h"
 
+#include <chrono>
 #include <mutex>
 
 namespace zeek {
 struct ProcessEventsTablePlugin::PrivateData final {
   RowList row_list;
   std::mutex row_list_mutex;
+  std::size_t max_queued_row_count{0U};
 };
 
 Status ProcessEventsTablePlugin::create(Ref &obj) {
@@ -104,12 +108,31 @@ Status ProcessEventsTablePlugin::processEvents(
       std::make_move_iterator(generated_row_list.end())
     );
     // clang-format on
+
+    if (d->row_list.size() > d->max_queued_row_count) {
+      auto rows_to_remove = d->row_list.size() - d->max_queued_row_count;
+
+      getLogger().logMessage(IZeekLogger::Severity::Warning,
+                             "process_events: Dropping " +
+                                 std::to_string(rows_to_remove) +
+                                 " rows (max row count is set to " +
+                                 std::to_string(d->max_queued_row_count));
+
+      // clang-format off
+      d->row_list.erase(
+        d->row_list.begin(),
+        std::next(d->row_list.begin(), rows_to_remove)
+      );
+      // clang-format on
+    }
   }
 
   return Status::success();
 }
 
-ProcessEventsTablePlugin::ProcessEventsTablePlugin() : d(new PrivateData) {}
+ProcessEventsTablePlugin::ProcessEventsTablePlugin() : d(new PrivateData) {
+  d->max_queued_row_count = getConfig().maxQueuedRowCount();
+}
 
 Status ProcessEventsTablePlugin::generateRow(
     Row &row, const IAudispConsumer::AuditEvent &audit_event) {

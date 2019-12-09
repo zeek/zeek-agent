@@ -13,7 +13,7 @@ namespace zeek {
 class ConfigurationChecker final {
 public:
   struct MemberConstraint final {
-    enum class Type { String, UInt16 };
+    enum class Type { String, UInt16, UInt32 };
 
     Type type;
     bool array{false};
