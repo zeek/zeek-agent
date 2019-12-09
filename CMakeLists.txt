@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 include("cmake/options.cmake")
 project("zeek-agent")
 
+include("cmake/version.cmake")
 include("cmake/flags.cmake")
 include("cmake/utils.cmake")
 include("cmake/tests.cmake")
@@ -66,6 +67,10 @@ function(zeekAgent)
   target_include_directories("${PROJECT_NAME}" PRIVATE
     src
   )
+
+  if(ZEEK_AGENT_ENABLE_INSTALL)
+    install(TARGETS "${PROJECT_NAME}" DESTINATION "bin")
+  endif()
 
   generateZeekAgentTest(
     SOURCE_TARGET

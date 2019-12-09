@@ -47,7 +47,7 @@ Status OsqueryInterface::start() {
       d->extension_runner_argc, d->extension_runner_argv,
       osquery::ToolType::EXTENSION);
 
-  auto osquery_status = osquery::startExtension("zeek-agent", "1.0");
+  auto osquery_status = osquery::startExtension("zeek-agent", ZEEK_AGENT_VERSION);
   if (!osquery_status.ok()) {
     return Status::failure("Failed to initialize the extension interface");
   }

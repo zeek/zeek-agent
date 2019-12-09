@@ -31,6 +31,13 @@ main() {
       mkdir "build"
   fi
 
+  if [ ! -d "package_build" ] ; then
+    executeCommand \
+      "Creating the package_build folder" \
+      . \
+      mkdir "package_build"
+  fi
+
   if [ ! -d "build/ccache" ] ; then
     executeCommand \
       "Creating the ccache folder" \
@@ -60,7 +67,7 @@ main() {
   executeCommand \
     "Installing system dependencies" \
     . \
-    sudo apt-get install clang clang-tidy-8 cppcheck ccache curl libssl-dev flex bison -y
+    sudo apt-get install clang clang-tidy-8 cppcheck ccache curl libssl-dev flex bison rpm -y
 
   executeCommand \
     "Synchronizing the submodules" \
@@ -144,7 +151,8 @@ main() {
   fi
 
   local ccache_folder="$(realpath build/ccache)"
-  local install_prefix="$(realpath build/install)"
+  local install_prefix="/usr"
+  local install_destination="$(realpath build/install)"
 
   export CCACHE_DIR="${ccache_folder}"
   export PATH="${osquery_toolchain_install_path}:${cmake_install_path}/bin:${PATH}"
@@ -153,13 +161,13 @@ main() {
     executeCommand \
       "Configuring the project (system build)" \
       "build" \
-      cmake -DCMAKE_C_COMPILER:STRING=clang -DCMAKE_CXX_COMPILER:STRING=clang++ -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
+      cmake -DCMAKE_C_COMPILER:STRING=clang -DCMAKE_CXX_COMPILER:STRING=clang++ -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
 
   elif [[ "${build_type}" == "--portable" ]] ; then
     executeCommand \
       "Configuring the project (portable)" \
       "build" \
-      cmake -DZEEK_AGENT_TOOLCHAIN_PATH="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
+      cmake -DZEEK_AGENT_TOOLCHAIN_PATH="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
 
     executeCommand \
       "Building OpenSSL" \
@@ -170,7 +178,7 @@ main() {
     executeCommand \
       "Configuring the project (portable-osquery)" \
       "build" \
-      cmake -DOSQUERY_TOOLCHAIN_SYSROOT="${osquery_toolchain_install_path}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false ../osquery
+      cmake -DOSQUERY_TOOLCHAIN_SYSROOT="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false ../osquery
   fi
 
   local job_count="$(($(nproc)+1))"
@@ -181,17 +189,25 @@ main() {
     "build" \
     cmake --build . -j "${job_count}"
 
-  if [[ "${build_type}" != "--portable-osquery" ]] ; then
-    executeCommand \
-      "Running the install target" \
-      "build" \
-      cmake --build . --target install
-  fi
+  executeCommand \
+    "Running the install target" \
+    "build" \
+    cmake --build . --target install -- DESTDIR="${install_destination}"
 
   executeCommand \
     "Running the tests" \
     "build" \
     cmake --build . --target "zeek_agent_tests"
+
+  executeCommand \
+    "Configuring the packaging project" \
+    "package_build" \
+    cmake -DZEEK_AGENT_INSTALL_PATH:PATH="${install_destination}" ../packaging
+
+  executeCommand \
+    "Generating packages" \
+    "package_build" \
+    cmake --build . --target "package"
 
   return 0
 }

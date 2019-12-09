@@ -11,6 +11,8 @@ std::atomic_bool terminate{false};
 void sigintHandler(int) { terminate = true; }
 
 int main() {
+  std::cout << "Zeek Agent v" << ZEEK_AGENT_VERSION << "\n";
+
   zeek::ZeekAgent::Ref zeek_agent;
   auto status = zeek::ZeekAgent::create(zeek_agent);
   if (!status.succeeded()) {

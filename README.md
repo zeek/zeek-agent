@@ -26,6 +26,8 @@ It is also possible to run the following script to configure, build, test and ge
 
 When building with the system compiler, the following packages are needed: `clang`, `libssl-dev`. There are no special requirements when building with the osquery-toolchain. For the osquery-enabled build, Flex and Bison should be installed.
 
+In order to successfully create packages, the `dpkg` and `rpm` binaries should be installed.
+
 **Obtaining the source code**
 
 Clone the repository along with all the necessary submodules: `git clone https://github.com/zeek/osquery-extension --recursive`
@@ -56,8 +58,8 @@ Full build (i.e. with support for osquery tables)
 2. Configure the project: `cmake <additional parameters, see the point above> -DCMAKE_BUILD_TYPE:STRING=Release -DZEEK_AGENT_ENABLE_INSTALL:BOOL=ON /path/to/source/folder`
 3. Build the binaries: `cmake --build . -j $(nproc)`
 4. Run the tests: `cmake --build . --target zeek_agent_tests -j $(nproc)`
-5. Install the binaries (**not yet supported**): `cmake --build . --target install -j $(nproc)`
-6. Create the packages (**not yet supported**): `cmake --build . --target package -j $(nproc)`
+5. Install the binaries: `cmake --build . --target install -j $(nproc)`
+6. Create the packages: `cmake --build . --target package -j $(nproc)`
 
 ## Configuration
 
