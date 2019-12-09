@@ -3,7 +3,7 @@ name: Linux
 on: [push]
 
 jobs:
-  system_compiler:
+  system:
     runs-on: ubuntu-latest
 
     steps:
@@ -13,14 +13,20 @@ jobs:
       uses: actions/cache@v1.0.3
       with:
         path: build/ccache
-        key: system_compiler_ccache
+        key: system_ccache
 
     - name: Cache (downloads)
       uses: actions/cache@v1.0.3
       with:
         path: build/downloads
-        key: system_compiler_downloads
-    
+        key: system_downloads
+
+    - name: Cache (submodules)
+      uses: actions/cache@v1.0.3
+      with:
+        path: .git/modules
+        key: system_submodules
+
     - name: Build
       run: ./scripts/build_release.sh --system
 
@@ -41,11 +47,17 @@ jobs:
       with:
         path: build/downloads
         key: portable_downloads
-    
+
+    - name: Cache (submodules)
+      uses: actions/cache@v1.0.3
+      with:
+        path: .git/modules
+        key: portable_submodules
+
     - name: Build
       run: ./scripts/build_release.sh --portable
 
-  osquery:
+  portable-osquery:
     runs-on: ubuntu-latest
 
     steps:
@@ -55,14 +67,20 @@ jobs:
       uses: actions/cache@v1.0.3
       with:
         path: build/ccache
-        key: osquery_ccache
+        key: portable_osquery_ccache
 
     - name: Cache (downloads)
       uses: actions/cache@v1.0.3
       with:
         path: build/downloads
-        key: osquery_downloads
-    
+        key: portable_osquery_downloads
+
+    - name: Cache (submodules)
+      uses: actions/cache@v1.0.3
+      with:
+        path: .git/modules
+        key: portable_osquery_submodules
+
     - name: Build
       run: ./scripts/build_release.sh --portable-osquery
 
