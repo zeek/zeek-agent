@@ -63,12 +63,12 @@ Full build (i.e. with support for osquery tables)
 
 ## Configuration
 
-**1 - Audit configuration**
+**Audit configuration**
 
 * The auditd daemon must be enabled and running: `systemctl enable --now auditd`
 * The `AF UNIX` audisp plugin must be set to **active** in `/etc/audisp/plugins.d/af_unix.conf`. Changing this setting requires a restart of the service: `systemctl restart auditd`
 
-**2 - Agent configuration**
+**Agent configuration**
 
 The configuration file is located at the following location: `/etc/zeek-agent/config.json`
 
@@ -97,6 +97,18 @@ A sample configuration follows:
 
 Please note that the `authentication` object should be omitted for now, as the Zeek scripts are yet to be updated.
 
-**3 - Installing Zeek and the Zeek scripts**
+**Installing Zeek and the Zeek scripts**
 
 Follow the install instructions found at the following repository: [osquery framework](https://github.com/zeek/osquery-framework#prerequisites)
+
+## Running Zeek Agent
+
+Both **Zeek** and **auditd** should be running. If [osquery](https://github.com/osquery/osquery) support was enabled at build time, then it should also be started. Make sure the extensions socket passed to osquery matches the path set in the Zeek Agent configuration.
+
+Here's an example on how to start osquery:
+
+```
+osqueryd --verbose --disable_extensions=false --extensions_socket=/var/osquery/osquery.em
+```
+
+The above settings can also be specified in the [osquery flagfile](https://osquery.readthedocs.io/en/stable/installation/cli-flags).
