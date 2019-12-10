@@ -1,0 +1,95 @@
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  portable-osquery-release:
+    name: Package generator
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Cache (ccache)
+      uses: actions/cache@v1.0.3
+      with:
+        path: build/ccache
+        key: portable_osquery_ccache
+
+    - name: Cache (downloads)
+      uses: actions/cache@v1.0.3
+      with:
+        path: build/downloads
+        key: portable_osquery_downloads
+
+    - name: Cache (submodules)
+      uses: actions/cache@v1.0.3
+      with:
+        path: .git/modules
+        key: portable_osquery_submodules
+
+    - name: Build
+      run: ./scripts/build_release.sh --portable-osquery
+
+    - name: Locate DEB package
+      id: locate_deb_package
+      run: |
+        echo ::set-output name=PACKAGE_PATH::$(ls package_build/*.deb)
+        echo ::set-output name=ASSET_NAME::$(cd package_build && ls *.deb)
+
+    - name: Locate RPM package
+      id: locate_rpm_package
+      run: |
+        echo ::set-output name=PACKAGE_PATH::$(ls package_build/*.rpm)
+        echo ::set-output name=ASSET_NAME::$(cd package_build && ls *.rpm)
+
+    - name: Locate tar.gz package
+      id: locate_targz_package
+      run: |
+        echo ::set-output name=PACKAGE_PATH::$(ls package_build/*.tar.gz)
+        echo ::set-output name=ASSET_NAME::$(cd package_build && ls *.tar.gz)
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1.0.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: true
+        prerelease: false
+
+    - name: Upload .deb package
+      id: upload_deb_package
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ steps.locate_deb_package.outputs.PACKAGE_PATH }}
+        asset_name: ${{ steps.locate_deb_package.outputs.ASSET_NAME }}
+        asset_content_type: application/vnd.debian.binary-package
+
+    - name: Upload .rpm package
+      id: upload_rpm_package
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ steps.locate_rpm_package.outputs.PACKAGE_PATH }}
+        asset_name: ${{ steps.locate_rpm_package.outputs.ASSET_NAME }}
+        asset_content_type: application/x-rpm
+
+    - name: Upload .tar.gz package
+      id: upload_targz_package
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ steps.locate_targz_package.outputs.PACKAGE_PATH }}
+        asset_name: ${{ steps.locate_targz_package.outputs.ASSET_NAME }}
+        asset_content_type: application/gzip
