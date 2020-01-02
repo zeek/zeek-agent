@@ -5,6 +5,8 @@
 #include <auparse.h>
 
 namespace zeek {
+/// \brief auparse interface (interface). See the auparse docs for more
+/// information
 class IAuparseInterface {
 public:
   using Ref = std::shared_ptr<IAuparseInterface>;

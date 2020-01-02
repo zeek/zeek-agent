@@ -72,6 +72,10 @@ function(zeekAgent)
     install(TARGETS "${PROJECT_NAME}" DESTINATION "bin")
   endif()
 
+  if(ZEEK_AGENT_ENABLE_DOCUMENTATION)
+    add_subdirectory("documentation")
+  endif()
+
   generateZeekAgentTest(
     SOURCE_TARGET
       "${PROJECT_NAME}"

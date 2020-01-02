@@ -7,6 +7,7 @@ endif()
 option(ZEEK_AGENT_ENABLE_TESTS "Set to ON to build the tests")
 option(ZEEK_AGENT_ENABLE_INSTALL "Set to ON to generate the install directives")
 option(ZEEK_AGENT_ENABLE_SANITIZERS "Set to ON to enable sanitizers. Only available when compiling with Clang")
+option(ZEEK_AGENT_ENABLE_DOCUMENTATION "Set to ON to generate the Doxygen documentation")
 
 set(ZEEK_AGENT_TOOLCHAIN_PATH "" CACHE PATH "Toolchain path")
 

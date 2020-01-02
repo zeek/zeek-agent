@@ -67,7 +67,7 @@ main() {
   executeCommand \
     "Installing system dependencies" \
     . \
-    sudo apt-get install clang clang-tidy-8 cppcheck ccache curl libssl-dev flex bison rpm -y
+    sudo apt-get install clang clang-tidy-8 cppcheck ccache curl libssl-dev flex bison rpm doxygen -y
 
   executeCommand \
     "Synchronizing the submodules" \
@@ -161,13 +161,13 @@ main() {
     executeCommand \
       "Configuring the project (system build)" \
       "build" \
-      cmake -DCMAKE_C_COMPILER:STRING=clang -DCMAKE_CXX_COMPILER:STRING=clang++ -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
+      cmake -DCMAKE_C_COMPILER:STRING=clang -DCMAKE_CXX_COMPILER:STRING=clang++ -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DZEEK_AGENT_ENABLE_DOCUMENTATION:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
 
   elif [[ "${build_type}" == "--portable" ]] ; then
     executeCommand \
       "Configuring the project (portable)" \
       "build" \
-      cmake -DZEEK_AGENT_TOOLCHAIN_PATH="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
+      cmake -DZEEK_AGENT_TOOLCHAIN_PATH="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_DOCUMENTATION:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
 
     executeCommand \
       "Building OpenSSL" \
@@ -178,7 +178,7 @@ main() {
     executeCommand \
       "Configuring the project (portable-osquery)" \
       "build" \
-      cmake -DOSQUERY_TOOLCHAIN_SYSROOT="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false ../osquery
+      cmake -DOSQUERY_TOOLCHAIN_SYSROOT="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_DOCUMENTATION:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false ../osquery
   fi
 
   local job_count="$(($(nproc)+1))"
@@ -188,6 +188,11 @@ main() {
     "Building the project" \
     "build" \
     cmake --build . -j "${job_count}"
+
+  executeCommand \
+    "Generating the Doxygen documentation" \
+    "build" \
+    cmake --build . --target "doxygen"
 
   executeCommand \
     "Running the install target" \

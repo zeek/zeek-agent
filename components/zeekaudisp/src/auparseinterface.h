@@ -5,11 +5,14 @@
 #include <zeek/status.h>
 
 namespace zeek {
+/// \brief auparse interface (interface). See the auparse docs for more
+/// information
 class AuparseInterface final : public IAuparseInterface {
   struct PrivateData;
   std::unique_ptr<PrivateData> d;
 
 public:
+  /// Factory
   static Status create(Ref &obj);
   virtual ~AuparseInterface();
 
