@@ -74,6 +74,12 @@
 /* Define to 1 if you have the `posix_fallocate' function. */
 #define HAVE_POSIX_FALLOCATE 1
 
+/* Define to 1 if we have pthread_yield */
+#define HAVE_PTHREAD_YIELD 1
+
+/* Define to 1 if you have the `rawmemchr' function. */
+#define HAVE_RAWMEMCHR 1
+
 /* Define to 1 if you have the `select' function. */
 #define HAVE_SELECT 1
 
@@ -91,6 +97,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #define HAVE_STRING_H 1
+
+/* Let us know if we have it or not */
+#define HAVE_STRNDUPA 1
 
 /* Define to 1 if `feature_bitmap' is a member of `struct audit_status'. */
 #define HAVE_STRUCT_AUDIT_STATUS_FEATURE_BITMAP 1
@@ -135,7 +144,7 @@
 #define PACKAGE_NAME "audit"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "audit 2.8.5"
+#define PACKAGE_STRING "audit 3.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "audit"
@@ -144,7 +153,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.8.5"
+#define PACKAGE_VERSION "3.0"
 
 /* The size of `unsigned int', as computed by sizeof. */
 #define SIZEOF_UNSIGNED_INT 4
@@ -168,13 +177,10 @@
 #define USE_LISTENER 1
 
 /* Version number of package */
-#define VERSION "2.8.5"
+#define VERSION "3.0"
 
 /* Define if you want to enable Aarch64 processor support. */
 #define WITH_AARCH64 1
-
-/* Define if you want to enable Alpha processor support. */
-/* #undef WITH_ALPHA */
 
 /* Define if you want to enable AppArmor events. */
 /* #undef WITH_APPARMOR */

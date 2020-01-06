@@ -25,8 +25,7 @@ public:
   virtual int firstRecord() override;
   virtual int getType() override;
   virtual int nextRecord() override;
-  virtual unsigned int getNumRecords() override;
-  virtual int gotoRecordNum(unsigned int num) override;
+  virtual int nextEvent() override;
 
   virtual void addCallback(auparse_callback_ptr callback, void *user_data,
                            user_destroy user_destroy_func) override;

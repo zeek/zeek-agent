@@ -61,12 +61,8 @@ int AuparseInterface::nextRecord() {
   return auparse_next_record(d->auparse_state);
 }
 
-unsigned int AuparseInterface::getNumRecords() {
-  return auparse_get_num_records(d->auparse_state);
-}
-
-int AuparseInterface::gotoRecordNum(unsigned int num) {
-  return auparse_goto_record_num(d->auparse_state, num);
+int AuparseInterface::nextEvent() {
+  return auparse_next_event(d->auparse_state);
 }
 
 void AuparseInterface::addCallback(auparse_callback_ptr callback,

@@ -22,16 +22,18 @@ function(generateLibaudit)
     "${libaudit_root}/audit_logging.c"
     "${libaudit_root}/libaudit.c"
     "${libaudit_root}/lookup_table.c"
-    "${libaudit_root}/strsplit.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/strsplit.c"
   )
 
   target_compile_definitions(thirdparty_audit_libaudit PRIVATE
     _GNU_SOURCE
     HAVE_CONFIG_H
+    HAVE_STRNDUPA
     PIC
   )
 
   target_include_directories(thirdparty_audit_libaudit PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common"
     "${CMAKE_CURRENT_SOURCE_DIR}/generated"
     "${CMAKE_CURRENT_SOURCE_DIR}/generated/lib"
     "${libaudit_root}"
@@ -64,18 +66,20 @@ function(generateLibauparse)
     "${libauparse_root}/auparse.c"
     "${libauparse_root}/ellist.c"
     "${libauparse_root}/interpret.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/generated/auparse/strsplit.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/strsplit.c"
   )
 
   target_compile_definitions(thirdparty_audit_libauparse PRIVATE
     _GNU_SOURCE
     HAVE_CONFIG_H
+    HAVE_STRNDUPA
     PIC
   )
 
   target_include_directories(thirdparty_audit_libauparse PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/generated"
     "${CMAKE_CURRENT_SOURCE_DIR}/generated/auparse"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common"
   )
 
   target_include_directories(thirdparty_audit_libauparse SYSTEM INTERFACE

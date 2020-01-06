@@ -11,11 +11,11 @@
 #include <unordered_map>
 
 #include <asm/unistd.h>
+#include <libaudit_wrapper.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <libaudit_wrapper.h>
 
 namespace zeek {
 struct AudispConsumer::PrivateData final {
@@ -180,6 +180,8 @@ void AudispConsumer::auparseCallback(auparse_cb_event_t event_type) {
       return;
     }
   }
+
+  d->auparse_interface->nextEvent();
 
   if (is_execve_syscall) {
     if (raw_execve_data.argument_list.empty()) {

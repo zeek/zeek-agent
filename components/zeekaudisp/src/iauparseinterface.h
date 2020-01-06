@@ -20,8 +20,7 @@ public:
   virtual int firstRecord() = 0;
   virtual int getType() = 0;
   virtual int nextRecord() = 0;
-  virtual unsigned int getNumRecords() = 0;
-  virtual int gotoRecordNum(unsigned int num) = 0;
+  virtual int nextEvent() = 0;
 
   virtual void addCallback(auparse_callback_ptr callback, void *user_data,
                            user_destroy user_destroy_func) = 0;

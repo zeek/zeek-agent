@@ -72,9 +72,7 @@ int MockedAuparseInterface::getType() { return 0; }
 
 int MockedAuparseInterface::nextRecord() { return 0; }
 
-unsigned int MockedAuparseInterface::getNumRecords() { return 0U; }
-
-int MockedAuparseInterface::gotoRecordNum(unsigned int) { return 0; }
+int MockedAuparseInterface::nextEvent() { return 0; }
 
 void MockedAuparseInterface::addCallback(auparse_callback_ptr, void *,
                                          user_destroy) {}

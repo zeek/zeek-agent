@@ -225,6 +225,4 @@ ZeekAgent::initializeServiceManager(IZeekServiceManager::Ref &service_manager) {
 
   return Status::success();
 }
-
-void ZeekAgent::stopServices() {}
 } // namespace zeek

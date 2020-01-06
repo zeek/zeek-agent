@@ -32,6 +32,9 @@ Status OsqueryInterface::start() {
   }
 
   // Connect to osquery
+  d->argv_contents.reserve(2U);
+  d->argv_pointer_array.reserve(2U);
+
   d->argv_contents.push_back("zeek-agent");
   d->argv_pointer_array.push_back(&d->argv_contents.back()[0]);
 
@@ -47,7 +50,8 @@ Status OsqueryInterface::start() {
       d->extension_runner_argc, d->extension_runner_argv,
       osquery::ToolType::EXTENSION);
 
-  auto osquery_status = osquery::startExtension("zeek-agent", ZEEK_AGENT_VERSION);
+  auto osquery_status =
+      osquery::startExtension("zeek-agent", ZEEK_AGENT_VERSION);
   if (!osquery_status.ok()) {
     return Status::failure("Failed to initialize the extension interface");
   }

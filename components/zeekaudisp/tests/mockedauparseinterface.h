@@ -27,8 +27,7 @@ public:
   virtual int feed(const char *, size_t) override;
   virtual int getType() override;
   virtual int nextRecord() override;
-  virtual unsigned int getNumRecords() override;
-  virtual int gotoRecordNum(unsigned int) override;
+  virtual int nextEvent() override;
   virtual void addCallback(auparse_callback_ptr, void *, user_destroy) override;
 
 protected:

@@ -56,12 +56,5 @@ private:
   /// \param service_manager Where the service manager object is stored
   /// \return A Status object
   Status initializeServiceManager(IZeekServiceManager::Ref &service_manager);
-
-  /// \brief Starts all services
-  /// \return A Status object
-  Status startServices();
-
-  /// \brief Stops all services
-  void stopServices();
 };
 } // namespace zeek
