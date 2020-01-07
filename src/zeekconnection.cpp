@@ -13,6 +13,12 @@
 
 namespace zeek {
 namespace {
+#if defined(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+const std::string kZeekAgentEdition{"osquery"};
+#else
+const std::string kZeekAgentEdition{"standalone"};
+#endif
+
 const std::string kHostSubscribeEvent{"osquery::host_subscribe"};
 const std::string kHostUnsubscribeEvent{"osquery::host_unsubscribe"};
 const std::string kHostJoinEvent{"osquery::host_join"};
@@ -453,7 +459,9 @@ ZeekConnection::ZeekConnection()
     {
       broker::data(caf::to_string(d->broker_endpoint->node_id())),
       broker::data(getHostIdentifier()),
-      joined_group_list
+      joined_group_list,
+      broker::data(ZEEK_AGENT_VERSION),
+      broker::data(kZeekAgentEdition)
     }
   );
   // clang-format on
