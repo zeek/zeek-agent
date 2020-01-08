@@ -24,7 +24,7 @@ function(zeekAgentLibraries)
 
   # OpenSSL is only built if we are building zeek-agent alone with
   # the custom toolchain
-  if(NOT ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+  if(NOT TARGET osqueryd)
     if(NOT "${ZEEK_AGENT_TOOLCHAIN_PATH}" STREQUAL "")
       add_subdirectory("zlib")
       add_subdirectory("openssl")

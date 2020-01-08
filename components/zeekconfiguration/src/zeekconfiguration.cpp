@@ -101,7 +101,6 @@ const ConfigurationChecker::Constraints kConfigurationConstraints = {
     }
   },
 
-#if defined(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
   {
     "osquery_extensions_socket",
 
@@ -112,7 +111,6 @@ const ConfigurationChecker::Constraints kConfigurationConstraints = {
       true
     }
   }
-#endif
 };
 // clang-format on
 } // namespace
@@ -255,12 +253,13 @@ Status ZeekConfiguration::parseConfigurationData(Context &context,
 
   context.server_address = document["server_address"].GetString();
 
-#if defined(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
-  context.osquery_extensions_socket =
-      document["osquery_extensions_socket"].GetString();
-#else
-  context.osquery_extensions_socket = "";
-#endif
+  if (document.HasMember("osquery_extensions_socket")) {
+    context.osquery_extensions_socket =
+        document["osquery_extensions_socket"].GetString();
+
+  } else {
+    context.osquery_extensions_socket = "";
+  }
 
   context.server_port =
       static_cast<std::uint16_t>(document["server_port"].GetInt());

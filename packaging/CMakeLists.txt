@@ -35,14 +35,24 @@ function(zeekAgentPackaging)
     message(FATAL_ERROR "The ZEEK_AGENT_INSTALL_PATH parameter is mandatory")
   endif()
 
-  set(zeek_agent_path "${ZEEK_AGENT_INSTALL_PATH}/usr/bin/zeek-agent")
+  set(standalone_zeek_agent_path "${ZEEK_AGENT_INSTALL_PATH}/usr/bin/zeek-agent")
+  if(EXISTS "${standalone_zeek_agent_path}")
+    message(STATUS "Found: Zeek Agent (standalone edition)")
+    list(APPEND executable_file_list "${standalone_zeek_agent_path}")
+  endif()
 
-  if(NOT EXISTS "${zeek_agent_path}")
+  set(osquery_zeek_agent_path "${ZEEK_AGENT_INSTALL_PATH}/usr/bin/zeek-agent-osquery")
+  if(EXISTS "${osquery_zeek_agent_path}")
+    message(STATUS "Found: Zeek Agent (osquery edition)")
+    list(APPEND executable_file_list "${osquery_zeek_agent_path}")
+  endif()
+
+  if("${executable_file_list}" STREQUAL "")
     message(FATAL_ERROR "The specified ZEEK_AGENT_INSTALL_PATH value is not valid")
   endif()
 
   install(
-    FILES "${zeek_agent_path}"
+    FILES ${executable_file_list}
 
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
                 GROUP_READ GROUP_WRITE GROUP_EXECUTE

@@ -16,60 +16,74 @@ function(zeekAgent)
   add_subdirectory("libraries")
   add_subdirectory("components")
 
-  add_executable("${PROJECT_NAME}"
-    src/main.cpp
-
-    src/zeekagent.h
-    src/zeekagent.cpp
-
-    src/zeekconnection.h
-    src/zeekconnection.cpp
-
-    src/uniquexxh64state.h
-    src/uniquexxh64state.cpp
-
-    src/logger.h
-    src/logger.cpp
-
-    src/configuration.h
-    src/configuration.cpp
-
-    src/queryscheduler.h
-    src/queryscheduler.cpp
-
-    src/tables/audisp/audispservice.h
-    src/tables/audisp/audispservice.cpp
-
-    src/tables/audisp/processeventstableplugin.h
-    src/tables/audisp/processeventstableplugin.cpp
-
-    src/tables/audisp/socketeventstableplugin.h
-    src/tables/audisp/socketeventstableplugin.cpp
+  set(target_name_list
+    "zeek-agent"
   )
 
-  target_link_libraries("${PROJECT_NAME}" PRIVATE
-    zeek_agent_cxx_settings
-    zeek_audisp
-    zeek_database
-    zeek_logger
-    zeek_service_manager
-    zeek_configuration
-    thirdparty_broker
-    thirdparty_xxhash
-  )
-
-  if(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
-    target_link_libraries("${PROJECT_NAME}" PRIVATE
-      zeek_osquery_interface
-    )
+  if(TARGET osqueryd)
+    list(APPEND target_name_list "zeek-agent-osquery")
   endif()
 
-  target_include_directories("${PROJECT_NAME}" PRIVATE
-    src
-  )
+  foreach(target_name ${target_name_list})
+    add_executable("${target_name}"
+      src/main.cpp
+
+      src/zeekagent.h
+      src/zeekagent.cpp
+
+      src/zeekconnection.h
+      src/zeekconnection.cpp
+
+      src/uniquexxh64state.h
+      src/uniquexxh64state.cpp
+
+      src/logger.h
+      src/logger.cpp
+
+      src/configuration.h
+      src/configuration.cpp
+
+      src/queryscheduler.h
+      src/queryscheduler.cpp
+
+      src/tables/audisp/audispservice.h
+      src/tables/audisp/audispservice.cpp
+
+      src/tables/audisp/processeventstableplugin.h
+      src/tables/audisp/processeventstableplugin.cpp
+
+      src/tables/audisp/socketeventstableplugin.h
+      src/tables/audisp/socketeventstableplugin.cpp
+    )
+
+    target_link_libraries("${target_name}" PRIVATE
+      zeek_agent_cxx_settings
+      zeek_audisp
+      zeek_database
+      zeek_logger
+      zeek_service_manager
+      zeek_configuration
+      thirdparty_broker
+      thirdparty_xxhash
+    )
+
+    target_include_directories("${target_name}" PRIVATE
+      src
+    )
+
+    if("${target_name}" STREQUAL "zeek-agent-osquery")
+      target_compile_definitions("${target_name}" PRIVATE
+        ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT
+      )
+
+      target_link_libraries("${target_name}" PRIVATE
+        zeek_osquery_interface
+      )
+    endif()
+  endforeach()
 
   if(ZEEK_AGENT_ENABLE_INSTALL)
-    install(TARGETS "${PROJECT_NAME}" DESTINATION "bin")
+    install(TARGETS ${target_name_list} DESTINATION "bin")
   endif()
 
   if(ZEEK_AGENT_ENABLE_DOCUMENTATION)
@@ -78,7 +92,7 @@ function(zeekAgent)
 
   generateZeekAgentTest(
     SOURCE_TARGET
-      "${PROJECT_NAME}"
+      "zeek-agent"
 
     SOURCES
       tests/main.cpp

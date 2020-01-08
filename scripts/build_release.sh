@@ -3,7 +3,12 @@
 export CMAKE_VERSION="3.15.5"
 
 main() {
-  if [[ $# -ne 1 || "$1" == "--help" ]] ; then
+  if [[ $# -lt 1  || $# -gt 2 ]] ; then
+    printUsage
+    return 1
+  fi
+
+  if [[ "$1" == "--help" ]] ; then
     printUsage
     return 1
   fi
@@ -22,6 +27,17 @@ main() {
     printUsage
     printf "Invalid build type specified: ${build_type}\n"
     return 1
+  fi
+
+  local only_build_package=0
+  if [[ $# -eq 2 ]] ; then
+    if [[ "$2" == "--package-only" ]] ; then
+      only_build_package=1
+    else
+      printUsage
+      printf "Invalid flag specified: $2\n"
+      return 1
+    fi
   fi
 
   if [ ! -d "build" ] ; then
@@ -157,17 +173,27 @@ main() {
   export CCACHE_DIR="${ccache_folder}"
   export PATH="${osquery_toolchain_install_path}:${cmake_install_path}/bin:${PATH}"
 
+  if [[ ${only_build_package} -eq 1 ]] ; then
+    local test_switch="-DZEEK_AGENT_ENABLE_TESTS:BOOL=false"
+    local documentation_switch="-DZEEK_AGENT_ENABLE_DOCUMENTATION:BOOL=false"
+    local sanitizers_switch="-DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=false"
+  else
+    local test_switch="-DZEEK_AGENT_ENABLE_TESTS:BOOL=true"
+    local documentation_switch="-DZEEK_AGENT_ENABLE_DOCUMENTATION:BOOL=true"
+    local sanitizers_switch="-DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=true"
+  fi
+
   if [[ "${build_type}" == "--system" ]] ; then
     executeCommand \
       "Configuring the project (system build)" \
       "build" \
-      cmake -DCMAKE_C_COMPILER:STRING=clang -DCMAKE_CXX_COMPILER:STRING=clang++ -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DZEEK_AGENT_ENABLE_DOCUMENTATION:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=true -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
+      cmake -DCMAKE_C_COMPILER:STRING=clang -DCMAKE_CXX_COMPILER:STRING=clang++ -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" "${documentation_switch}" -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true "${sanitizers_switch}" "${test_switch}" -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
 
   elif [[ "${build_type}" == "--portable" ]] ; then
     executeCommand \
       "Configuring the project (portable)" \
       "build" \
-      cmake -DZEEK_AGENT_TOOLCHAIN_PATH="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_DOCUMENTATION:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=true -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
+      cmake -DZEEK_AGENT_TOOLCHAIN_PATH="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo "${documentation_switch}" -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true "${sanitizers_switch}" "${test_switch}" -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true ..
 
     executeCommand \
       "Building OpenSSL" \
@@ -178,7 +204,7 @@ main() {
     executeCommand \
       "Configuring the project (portable-osquery)" \
       "build" \
-      cmake -DOSQUERY_TOOLCHAIN_SYSROOT="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo -DZEEK_AGENT_ENABLE_DOCUMENTATION:BOOL=true -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true -DZEEK_AGENT_ENABLE_TESTS:BOOL=true -DZEEK_AGENT_ENABLE_SANITIZERS:BOOL=true ../osquery
+      cmake -DOSQUERY_TOOLCHAIN_SYSROOT="${osquery_toolchain_install_path}" -DCMAKE_INSTALL_PREFIX:PATH="${install_prefix}" -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo "${documentation_switch}" -DZEEK_AGENT_ENABLE_INSTALL:BOOL=true "${test_switch}" "${sanitizers_switch}" ../osquery
   fi
 
   local job_count="$(($(nproc)+1))"
@@ -189,10 +215,12 @@ main() {
     "build" \
     cmake --build . -j "${job_count}"
 
-  executeCommand \
-    "Generating the Doxygen documentation" \
-    "build" \
-    cmake --build . --target "doxygen"
+  if [[ ${only_build_package} -eq 0 ]] ; then
+    executeCommand \
+      "Generating the Doxygen documentation" \
+      "build" \
+      cmake --build . --target "doxygen"
+  fi
 
   executeCommand \
     "Running the install target" \
@@ -203,10 +231,12 @@ main() {
     export ASAN_OPTIONS=detect_container_overflow=0
   fi
 
-  executeCommand \
-    "Running the tests" \
-    "build" \
-    cmake --build . --target "zeek_agent_tests"
+  if [[ ${only_build_package} -eq 0 ]] ; then
+    executeCommand \
+      "Running the tests" \
+      "build" \
+      cmake --build . --target "zeek_agent_tests"
+  fi
 
   executeCommand \
     "Configuring the packaging project" \
@@ -235,7 +265,7 @@ executeCommand() {
 }
 
 printUsage() {
-  printf "Usage:\n\tbuild_release.sh [--system | --portable | --portable-osquery]\n\n"
+  printf "Usage:\n\tbuild_release.sh <--system | --portable | --portable-osquery> [--package-only]\n\n"
 }
 
 main $@

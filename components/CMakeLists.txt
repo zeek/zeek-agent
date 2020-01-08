@@ -8,7 +8,7 @@ function(zeekComponents)
   add_subdirectory("zeekservicemanager")
   add_subdirectory("zeekconfiguration")
 
-  if(ZEEK_AGENT_ENABLE_OSQUERY_SUPPORT)
+  if(TARGET osqueryd)
     add_subdirectory("zeekosqueryinterface")
   endif()
 endfunction()
