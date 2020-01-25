@@ -63,7 +63,7 @@ function(zeekAgent)
       zeek_logger
       zeek_service_manager
       zeek_configuration
-      thirdparty_broker
+      thirdparty_broker_lts
       thirdparty_xxhash
     )
 

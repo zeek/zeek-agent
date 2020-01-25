@@ -24,7 +24,7 @@ function(generateActorFramework)
 
   set(caf_core_root "${library_root}/libcaf_core")
 
-  add_library(thirdparty_caf_core
+  add_library(thirdparty_caf_core_lts
     "${caf_core_root}/src/abstract_actor.cpp"
     "${caf_core_root}/src/abstract_channel.cpp"
     "${caf_core_root}/src/abstract_composable_behavior.cpp"
@@ -147,19 +147,19 @@ function(generateActorFramework)
     "${caf_core_root}/src/string_algorithms.cpp"
   )
 
-  target_include_directories(thirdparty_caf_core
+  target_include_directories(thirdparty_caf_core_lts
     PRIVATE
       "${caf_core_root}"
       "${CMAKE_CURRENT_SOURCE_DIR}/generated"
   )
 
-  target_include_directories(thirdparty_caf_core
+  target_include_directories(thirdparty_caf_core_lts
     SYSTEM INTERFACE
       "${caf_core_root}"
       "${CMAKE_CURRENT_SOURCE_DIR}/generated"
   )
 
-  target_link_libraries(thirdparty_caf_core
+  target_link_libraries(thirdparty_caf_core_lts
     PUBLIC
       zeek_agent_cxx_settings
 
@@ -169,7 +169,7 @@ function(generateActorFramework)
 
   set(caf_io_root "${library_root}/libcaf_io")
 
-  add_library(thirdparty_caf_io
+  add_library(thirdparty_caf_io_lts
     "${caf_io_root}/src/abstract_broker.cpp"
     "${caf_io_root}/src/acceptor.cpp"
     "${caf_io_root}/src/acceptor_manager.cpp"
@@ -210,21 +210,21 @@ function(generateActorFramework)
     "${caf_io_root}/src/udp.cpp"
   )
 
-  target_include_directories(thirdparty_caf_io
+  target_include_directories(thirdparty_caf_io_lts
     PRIVATE
       "${caf_io_root}"
       "${CMAKE_CURRENT_SOURCE_DIR}/generated"
   )
 
-  target_include_directories(thirdparty_caf_io
+  target_include_directories(thirdparty_caf_io_lts
     SYSTEM INTERFACE
       "${caf_io_root}"
   )
 
-  target_link_libraries(thirdparty_caf_io
+  target_link_libraries(thirdparty_caf_io_lts
     PUBLIC
       zeek_agent_cxx_settings
-      thirdparty_caf_core
+      thirdparty_caf_core_lts
 
     PRIVATE
       zeek_agent_libraries_settings
@@ -232,7 +232,7 @@ function(generateActorFramework)
 
   set(caf_openssl_root "${library_root}/libcaf_openssl")
 
-  add_library(thirdparty_caf_openssl
+  add_library(thirdparty_caf_openssl_lts
     "${caf_openssl_root}/src/manager.cpp"
     "${caf_openssl_root}/src/middleman_actor.cpp"
     "${caf_openssl_root}/src/publish.cpp"
@@ -240,41 +240,41 @@ function(generateActorFramework)
     "${caf_openssl_root}/src/session.cpp"
   )
 
-  target_include_directories(thirdparty_caf_openssl
+  target_include_directories(thirdparty_caf_openssl_lts
     PRIVATE
       "${caf_openssl_root}"
       "${CMAKE_CURRENT_SOURCE_DIR}/generated"
   )
 
-  target_include_directories(thirdparty_caf_openssl
+  target_include_directories(thirdparty_caf_openssl_lts
     SYSTEM INTERFACE
       "${caf_openssl_root}"
   )
 
-  target_link_libraries(thirdparty_caf_openssl
+  target_link_libraries(thirdparty_caf_openssl_lts
     PUBLIC
       zeek_agent_cxx_settings
-      thirdparty_caf_core
-      thirdparty_caf_io
+      thirdparty_caf_core_lts
+      thirdparty_caf_io_lts
       thirdparty_openssl
 
     PRIVATE
       zeek_agent_libraries_settings
   )
 
-  add_library(thirdparty_actorframework INTERFACE)
+  add_library(thirdparty_actorframework_lts INTERFACE)
 
-  target_link_libraries(thirdparty_actorframework INTERFACE
-    thirdparty_caf_core
-    thirdparty_caf_io
-    thirdparty_caf_openssl
+  target_link_libraries(thirdparty_actorframework_lts INTERFACE
+    thirdparty_caf_core_lts
+    thirdparty_caf_io_lts
+    thirdparty_caf_openssl_lts
   )
 endfunction()
 
 function(generateBroker)
   set(library_root "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
-  add_library(thirdparty_broker
+  add_library(thirdparty_broker_lts
     "${library_root}/src/address.cc"
     "${library_root}/src/configuration.cc"
     "${library_root}/src/core_actor.cc"
@@ -295,7 +295,7 @@ function(generateBroker)
     "${library_root}/src/time.cc"
     "${library_root}/src/topic.cc"
     "${library_root}/src/version.cc"
-  
+
     "${library_root}/src/detail/abstract_backend.cc"
     "${library_root}/src/detail/clone_actor.cc"
     "${library_root}/src/detail/core_policy.cc"
@@ -311,30 +311,30 @@ function(generateBroker)
     "${library_root}/src/detail/sqlite_backend.cc"
   )
 
-  target_link_libraries(thirdparty_broker
+  target_link_libraries(thirdparty_broker_lts
     PUBLIC
       zeek_agent_cxx_settings
-      thirdparty_actorframework
+      thirdparty_actorframework_lts
       thirdparty_sqlite
 
     PRIVATE
       zeek_agent_libraries_settings
   )
 
-  target_include_directories(thirdparty_broker PRIVATE
+  target_include_directories(thirdparty_broker_lts PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/generated"
     "${library_root}/src/detail"
     "${library_root}"
   )
 
-  target_include_directories(thirdparty_broker SYSTEM INTERFACE
+  target_include_directories(thirdparty_broker_lts SYSTEM INTERFACE
     "${CMAKE_CURRENT_SOURCE_DIR}/generated"
     "${library_root}"
   )
 
   # Also attempt to turn off the make_unique reimplementation that upstream
   # has added inside the std namespace
-  target_compile_definitions(thirdparty_broker PRIVATE
+  target_compile_definitions(thirdparty_broker_lts PRIVATE
     BROKER_LINUX=1
     BROKER_DETAIL_MAKE_UNIQUE_HH
   )

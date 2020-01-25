@@ -8,7 +8,7 @@ function(zeekAgentLibraries)
 
   add_subdirectory("catch2")
   add_subdirectory("audit")
-  add_subdirectory("broker")
+  add_subdirectory("broker-lts")
   add_subdirectory("xxhash")
 
   # If we are being built under osquery, then we may already have
