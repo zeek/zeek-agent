@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.16.3)
 project("zeek-agent")
 
 include("../cmake/version.cmake")
@@ -20,16 +20,11 @@ set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${ZEEK_AGENT_VERSION}-${PACKA
 set(CPACK_PACKAGE_RELOCATABLE ON)
 set(CPACK_SET_DESTDIR ON)
 
-set(CPACK_DEBIAN_PACKAGE_RELEASE "${PACKAGE_VERSION}")
-set(CPACK_DEBIAN_PACKAGE_PRIORITY "extra")
-set(CPACK_DEBIAN_PACKAGE_SECTION "default")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>=2.12)")
-set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "${CPACK_PACKAGE_HOMEPAGE_URL}")
+set(CPACK_GENERATOR "TGZ")
 
-set(CPACK_RPM_PACKAGE_RELEASE_DIST "${PACKAGE_VERSION}")
-set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
-set(CPACK_RPM_PACKAGE_GROUP "default")
-set(CPACK_RPM_PACKAGE_REQUIRES "glibc >= 2.12")
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+  include("cmake/linux.cmake")
+endif()
 
 function(zeekAgentPackaging)
   if("${ZEEK_AGENT_INSTALL_PATH}" STREQUAL "")
@@ -72,34 +67,21 @@ function(zeekAgentPackaging)
     DESTINATION "bin"
   )
 
-  install(
-    FILES "config/config.sample.json"
-          "config/10-zeek_agent.sample.rules"
+  set(sample_config_list
+    "config/config.sample.json"
+  )
 
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+    list(APPEND sample_config_list
+      "config/10-zeek_agent.sample.rules"
+    )
+  endif()
+
+  install(
+    FILES ${sample_config_list}
     DESTINATION "/etc/zeek-agent"
   )
 endfunction()
 
-set(CPACK_GENERATOR "TGZ")
-
-unset(rpm_executable_path CACHE)
-find_program(rpm_executable_path "rpm")
-if("${rpm_executable_path}" STREQUAL "rpm_executable_path-NOTFOUND")
-  message(WARNING "zeek-agent: The RPM package generator requires the 'rpm' tool")
-else()
-  list(APPEND CPACK_GENERATOR "RPM")
-  message(STATUS "zeek-agent: The RPM generator has been enabled")
-endif()
-
-unset(dpkg_executable_path CACHE)
-find_program(dpkg_executable_path "dpkg")
-if("${dpkg_executable_path}" STREQUAL "dpkg_executable_path-NOTFOUND")
-  message(WARNING "zeek-agent: The DEB package generator requires the 'dpkg' tool")
-else()
-  list(APPEND CPACK_GENERATOR "DEB")
-  message(STATUS "zeek-agent: The DEB generator has been enabled")
-endif()
-
 include(CPack)
-
 zeekAgentPackaging()

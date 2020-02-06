@@ -12,8 +12,11 @@ function(zeekAgentLibraries)
     add_subdirectory("broker")
   endif()
 
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+    add_subdirectory("audit")
+  endif()
+
   add_subdirectory("catch2")
-  add_subdirectory("audit")
   add_subdirectory("xxhash")
 
   # If we are being built under osquery, then we may already have
@@ -27,22 +30,9 @@ function(zeekAgentLibraries)
     add_subdirectory("rapidjson")
   endif()
 
-  # OpenSSL is only built if we are building zeek-agent alone with
-  # the custom toolchain
-  if(NOT TARGET osqueryd)
-    if(NOT "${ZEEK_AGENT_TOOLCHAIN_PATH}" STREQUAL "")
-      add_subdirectory("zlib")
-      add_subdirectory("openssl")
-
-    else()
-      find_package(OpenSSL REQUIRED)
-
-      add_library(thirdparty_openssl INTERFACE)
-      target_link_libraries(thirdparty_openssl INTERFACE
-        OpenSSL::SSL
-        OpenSSL::Crypto
-      )
-    endif()
+  if(NOT TARGET thirdparty_openssl)
+    add_subdirectory("zlib")
+    add_subdirectory("openssl")
   endif()
 endfunction()
 

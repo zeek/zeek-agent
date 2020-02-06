@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.16.3)
 project("zeek_osquery_interface")
 
 function(zeekAgentComponentsOsqueryInterface)
@@ -26,15 +26,15 @@ function(zeekAgentComponentsOsqueryInterface)
   target_link_libraries("${PROJECT_NAME}"
     PRIVATE
       zeek_agent_cxx_settings
-      osquery_sdk_pluginsdk
-      osquery_extensions_extensionsinterface
-      osquery_extensions
-      external_options
 
     PUBLIC
       zeek_utils
       zeek_database
       zeek_logger
+      osquery_sdk_pluginsdk
+      osquery_extensions_extensionsinterface
+      osquery_extensions
+      external_options
   )
 endfunction()
 
