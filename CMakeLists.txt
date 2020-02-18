@@ -8,6 +8,7 @@ include("cmake/flags.cmake")
 include("cmake/utils.cmake")
 include("cmake/tests.cmake")
 include("cmake/ccache.cmake")
+include("cmake/codesigning.cmake")
 
 function(zeekAgent)
   generateSettingsTarget()
@@ -25,8 +26,12 @@ function(zeekAgent)
     list(APPEND target_name_list "zeek-agent-osquery")
   endif()
 
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+    set(add_executable_options MACOSX_BUNDLE)
+  endif()
+
   foreach(target_name ${target_name_list})
-    add_executable("${target_name}"
+    add_executable("${target_name}" ${add_executable_options}
       src/main.cpp
 
       src/zeekagent.h
@@ -73,10 +78,22 @@ function(zeekAgent)
         zeek_osquery_interface
       )
     endif()
+
+    codeSign("${PROJECT_NAME}" "${CMAKE_CURRENT_SOURCE_DIR}/entitlements.plist")
   endforeach()
 
   if(ZEEK_AGENT_ENABLE_INSTALL)
-    install(TARGETS ${target_name_list} DESTINATION "bin")
+    if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" OR "${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
+      set(destination_path "bin")
+
+    elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
+      set(destination_path "/Applications")
+
+    else()
+      message(FATAL_ERROR "Unsupported platform")
+    endif()
+
+    install(TARGETS ${target_name_list} DESTINATION "${destination_path}")
   endif()
 
   if(ZEEK_AGENT_ENABLE_DOCUMENTATION)

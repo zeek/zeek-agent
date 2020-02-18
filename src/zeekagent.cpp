@@ -9,6 +9,8 @@
 
 #if defined(ZEEK_AGENT_PLATFORM_LINUX)
 #include <zeek/audispservicefactory.h>
+#elif defined(ZEEK_AGENT_PLATFORM_MACOS)
+#include <zeek/endpointsecurityservicefactory.h>
 #endif
 
 #include <chrono>
@@ -150,7 +152,6 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
   service_manager.reset();
 
   getLogger().logMessage(IZeekLogger::Severity::Information, "Terminating");
-
   return Status::success();
 }
 
@@ -215,6 +216,17 @@ ZeekAgent::initializeServiceManager(IZeekServiceManager::Ref &service_manager) {
 
   if (!status.succeeded()) {
     throw status;
+  }
+
+#elif defined(ZEEK_AGENT_PLATFORM_MACOS)
+  status = registerEndpointSecurityServiceFactory(
+      *service_manager.get(), virtual_database, getConfig(), getLogger());
+
+  if (!status.succeeded()) {
+    getLogger().logMessage(
+        IZeekLogger::Severity::Error,
+        "The EndpointSecurity tables could not be initialized: " +
+            status.message());
   }
 #endif
 
