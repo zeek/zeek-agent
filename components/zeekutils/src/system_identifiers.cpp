@@ -10,10 +10,14 @@
 #include <unistd.h>
 #include <uuid/uuid.h>
 
+#elif defined(WIN32)
+#include <tchar.h>
+#include <zeek/network.h>
+
 #else
 #error Unsupported platform
 #endif
-
+#include <iostream>
 namespace zeek {
 namespace {
 // 16-bytes + 4 separators
@@ -52,6 +56,30 @@ Status getHostUUID(std::string &uuid) {
 
   uuid_value = buffer.c_str();
 
+#elif defined(WIN32)
+  static const auto kCryptographyKeyPath =
+      _T("SOFTWARE\\Microsoft\\Cryptography");
+
+  static const auto kMachineGuidValueName = _T("MachineGuid");
+
+  DWORD value_size{0};
+  if (RegGetValue(HKEY_LOCAL_MACHINE, kCryptographyKeyPath,
+                  kMachineGuidValueName, RRF_RT_REG_SZ, nullptr, nullptr,
+                  &value_size) != ERROR_SUCCESS) {
+
+    return Status::failure("Failed to access the MachineGuid registry key");
+  }
+
+  std::vector<char> buffer(value_size + 1, 0);
+  if (RegGetValue(HKEY_LOCAL_MACHINE, kCryptographyKeyPath,
+                  kMachineGuidValueName, RRF_RT_REG_SZ, nullptr, buffer.data(),
+                  &value_size) != ERROR_SUCCESS) {
+
+    return Status::failure("Failed to read the MachineGuid registry key");
+  }
+
+  uuid_value = buffer.data();
+
 #else
 #error Unsupported platform
 #endif
@@ -67,9 +95,9 @@ Status getHostUUID(std::string &uuid) {
 }
 
 std::string getSystemHostname() {
-#if defined(__linux__) || defined(__APPLE__)
+#if defined(__linux__) || defined(__APPLE__) || defined(WIN32)
   std::vector<char> buffer(1024);
-  gethostname(buffer.data(), buffer.size());
+  gethostname(buffer.data(), static_cast<int>(buffer.size()));
   buffer.push_back(0);
 
   return buffer.data();
