@@ -7,7 +7,8 @@ TEST_CASE("Reading configuration files", "[ZeekConfiguration]") {
 #ifdef WIN32
   const std::string kExpectedLogFolder{"C:\\logs\\zeek-agent"};
   const std::string kExpectedCertFile{"nul"};
-  const std::string kExceptedOsqueryExtensionsSocket{"C:\\osquery_extensions_socket"};
+  const std::string kExceptedOsqueryExtensionsSocket{
+      "C:\\osquery_extensions_socket"};
 
   const std::string kTestConfiguration = R""(
   {
@@ -80,7 +81,8 @@ TEST_CASE("Reading configuration files", "[ZeekConfiguration]") {
   REQUIRE(context.certificate_authority == kExpectedCertFile);
   REQUIRE(context.client_certificate == kExpectedCertFile);
   REQUIRE(context.client_key == kExpectedCertFile);
-  REQUIRE(context.osquery_extensions_socket == kExceptedOsqueryExtensionsSocket);
+  REQUIRE(context.osquery_extensions_socket ==
+          kExceptedOsqueryExtensionsSocket);
 
   REQUIRE(context.max_queued_row_count == 1337U);
 }

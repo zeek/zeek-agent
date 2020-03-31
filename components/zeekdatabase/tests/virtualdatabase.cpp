@@ -19,7 +19,8 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
 
       THEN("the new virtual table can be queried") {
         IVirtualDatabase::QueryOutput query_output;
-        status = virtual_database->query(query_output, "SELECT * FROM TestTable;");
+        status =
+            virtual_database->query(query_output, "SELECT * FROM TestTable;");
 
         REQUIRE(status.succeeded());
         REQUIRE(!query_output.empty());
@@ -66,7 +67,7 @@ SCENARIO("Basic VirtualDatabase operations", "[VirtualDatabase]") {
       // clang-format on
 
       status = virtual_database->query(query_output,
-                                            "SELECT * FROM InvalidTableName;");
+                                       "SELECT * FROM InvalidTableName;");
 
       THEN("an error is generated and no output is returned") {
         REQUIRE(!status.succeeded());
@@ -144,7 +145,8 @@ SCENARIO("VirtualDatabase utilities", "[VirtualDatabase]") {
     TestTable invalid_table(TestTable::SchemaType::Invalid);
 
     WHEN("validating column types and names") {
-      auto status = VirtualDatabase::validateTableSchema(invalid_table.schema());
+      auto status =
+          VirtualDatabase::validateTableSchema(invalid_table.schema());
 
       THEN("an error is returned") { REQUIRE(!status.succeeded()); }
     }
