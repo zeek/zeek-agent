@@ -4,11 +4,11 @@
 #include <vector>
 
 #include <errno.h>
+#include <libaudit_wrapper.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
-#include <libaudit_wrapper.h>
 
 namespace zeek {
 namespace {

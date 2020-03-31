@@ -22,8 +22,10 @@ std::string getConfigurationFilePath() {
 
     if (GetModuleFileName(nullptr, buffer.data(), char_count) == 0 ||
         GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+
       std::cerr << "Failed to determine the executable path. The config will "
                    "be loaded from the working directory\n";
+
       return std::string("config.json");
     }
 
@@ -36,12 +38,14 @@ std::string getConfigurationFilePath() {
   auto char_count = WideCharToMultiByte(CP_UTF8, 0, executable_path.c_str(), -1,
                                         temp_buffer.data(), temp_buffer.size(),
                                         nullptr, nullptr);
+
   executable_path = temp_buffer.data();
 #endif
 
   auto config_path =
       std::filesystem::path(executable_path).parent_path().parent_path() /
       "etc" / "config.json";
+
   return config_path.string();
 
 #else

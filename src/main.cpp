@@ -14,6 +14,9 @@
 #error Unsupported platform
 #endif
 
+const std::string kNoAuthWarningMessage{
+    "Certificate-based authentication is not enabled"};
+
 std::atomic_bool terminate_agent{false};
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -70,6 +73,15 @@ int main() {
   if (!status.succeeded()) {
     std::cerr << "Initialization failed: " << status.message() << "\n";
     return 1;
+  }
+
+  if (zeek::getConfig().clientCertificate().empty() ||
+      zeek::getConfig().clientKey().empty()) {
+
+    std::cerr << kNoAuthWarningMessage << "\n";
+
+    zeek::getLogger().logMessage(zeek::IZeekLogger::Severity::Warning,
+                                 kNoAuthWarningMessage);
   }
 
   status = zeek_agent->exec(terminate_agent);

@@ -137,7 +137,8 @@ Status ZeekAgent::exec(std::atomic_bool &terminate) {
 
     auto task_output_list = query_scheduler->getTaskOutputList();
     if (!task_output_list.empty()) {
-      status = zeek_connection->processTaskOutputList(std::move(task_output_list));
+      status =
+          zeek_connection->processTaskOutputList(std::move(task_output_list));
 
       if (!status.succeeded()) {
         getLogger().logMessage(IZeekLogger::Severity::Error,

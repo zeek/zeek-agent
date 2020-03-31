@@ -141,7 +141,9 @@ Status ConfigurationChecker::validateWithConstraints(
       }
     }
 
-    default: { break; }
+    default: {
+      break;
+    }
     }
 
     if (!valid_type) {
