@@ -11,7 +11,9 @@ if("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_C_COMPILER_ID}" STREQUA
 
 else()
   set(ZEEK_AGENT_COMMON_COMPILATION_FLAGS
+    /MT
     /WX
     /W4
+    /bigobj
   )
 endif()
